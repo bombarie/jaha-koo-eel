@@ -1,0 +1,29 @@
+esphome:
+  name: eel_xiao_esp32c3
+
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "jemoeder123"
+
+ota:
+  password: "jemoeder123"
+
+wifi:
+  ssid: "KPNDD8E26"
+  password: "ZMVtGxtHJL4vdwNq"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Eel Xiao Esp32C3"
+    password: "DKCoVrmOPWDO"
+
+captive_portal:
+    
