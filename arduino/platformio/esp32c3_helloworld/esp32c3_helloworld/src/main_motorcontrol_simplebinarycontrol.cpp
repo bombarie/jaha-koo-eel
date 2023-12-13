@@ -10,18 +10,18 @@ void setup()
   Serial.begin(115200);
   Serial.println("Hello World!");
 
-  pinMode(PINA, OUTPUT);
-  pinMode(PINB, OUTPUT);
+  pinMode(PIN_MOTOR1_A, OUTPUT);
+  pinMode(PIN_MOTOR1_B, OUTPUT);
 }
 
 void loop()
 {
   Serial.println("pinA HIGH, pinB LOW");
-  digitalWrite(PINA, HIGH);
-  digitalWrite(PINB, LOW);
+  digitalWrite(PIN_MOTOR1_A, HIGH);
+  digitalWrite(PIN_MOTOR1_B, LOW);
   delay(1000);
   Serial.println("pinA LOW, pinB HIGH");
-  digitalWrite(PINA, LOW);
-  digitalWrite(PINB, HIGH);
+  digitalWrite(PIN_MOTOR1_A, LOW);
+  digitalWrite(PIN_MOTOR1_B, HIGH);
   delay(500);
 }

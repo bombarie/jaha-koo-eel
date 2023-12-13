@@ -11,7 +11,7 @@
 #define RES 8     // Resolution in bits:  8 (0-255),  12 (0-4095), or 16 (0-65535)
 #define FREQ 5000 // PWM Frequency in Hz
 
-MX1508 motorA(PINA, PINB, CH1, CH2); // Default-  8 bit resoluion at 2500 Hz
+MX1508 motorA(PIN_MOTOR1_A, PIN_MOTOR1_B, CH1, CH2); // Default-  8 bit resoluion at 2500 Hz
 
 void setup()
 {
