@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "esp32c3_helloworld",
+			"path": "esp32c3_helloworld/esp32c3_helloworld"
+		},
+		{
+			"name": "TeensyDuino",
+			"path": "TeensyDuino"
+		}
+	],
+	"settings": {}
+}
