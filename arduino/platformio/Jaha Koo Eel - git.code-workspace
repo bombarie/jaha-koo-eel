@@ -10,7 +10,28 @@
 		{
 			"name": "TeensyDuino",
 			"path": "TeensyDuino"
+		},
+		{
+			"name": "TmpTeensy",
+			"path": "TmpTeensy"
+		},
+		{
+			"name": "micro dc-motor rotation sensing testeroo",
+			"path": "micro dc-motor rotation sensing testeroo"
+		},
+		{
+			"name": "motors_testing_esp32s2",
+			"path": "motors_testing_esp32s2"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"*.tcc": "cpp",
+			"bitset": "cpp",
+			"limits": "cpp",
+			"functional": "cpp",
+			"regex": "cpp",
+			"tuple": "cpp"
+		}
+	}
 }
