@@ -5,20 +5,10 @@
 #include <HardwareSerial.h>
 #include <Adafruit_NeoPixel.h>
 #include <FastLED.h>
-#include "Adafruit_TLC59711.h"
-#include <SPI.h>
 
 // NeoPixel
 #define PIN D9
 #define NUMPIXELS 3
-
-// How many boards do you have chained?
-#define NUM_TLC59711 1
-
-#define data_pin D10
-#define clock_pin D8
-
-Adafruit_TLC59711 tlc = Adafruit_TLC59711(NUM_TLC59711, clock_pin, data_pin);
 
 #define MOUTH_LED_OUT D9
 
@@ -128,9 +118,6 @@ void setup()
   analogWriteResolution(8);
   analogWriteFrequency(2500);
 
-  tlc.begin();
-  tlc.write();
-
   pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
 
   Serial.println("Hello World!");
@@ -148,73 +135,40 @@ void loop()
   updateHeadLighting();
   updateBodyLighting();
 
-  /*
-  // write noods value according to sbus channel TX_YAW
-  float nood1Val = constrain(map(data.ch[TX_YAW], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 65535), 0, 65535);
-  float nood2Val = constrain(map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 65535), 0, 65535);
-  tlc.setLED(0, nood1Val, nood2Val, 0);
-  tlc.setLED(1, nood1Val, nood2Val, 0);
-  // tlc.setLED(1, nood2Val, 0, 0);
-  tlc.write();
-  */
-
-  // byte mouthLedOut = constrain(map(data.ch[TX_YAW], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 250), 0, 255);
-  // analogWrite(MOUTH_LED_OUT, mouthLedOut);
-
-  byte motorPowerRange = 50;
-  if (data.ch[TX_AUX2] > SBUS_SWITCH_MAX_THRESHOLD)
+  byte motorPowerRange = 255;
+  if (data.ch[TX_AUX4] > SBUS_SWITCH_MIN_THRESHOLD)
   {
     motorPowerRange = 255;
   }
-  else if (data.ch[TX_AUX2] > SBUS_SWITCH_MIN_THRESHOLD)
+  else if (data.ch[TX_AUX4] > SBUS_SWITCH_MAX_THRESHOLD)
   {
-    motorPowerRange = 170;
+    motorPowerRange = 130;
   }
   else
   {
-    motorPowerRange = 100;
+    motorPowerRange = 80;
   }
 
   motor1Val = constrain(map(data.ch[TX_ROLL], SBUS_VAL_MIN, SBUS_VAL_MAX, -motorPowerRange, motorPowerRange), -255, 255);
   motor2Val = constrain(map(data.ch[TX_PITCH], SBUS_VAL_MIN, SBUS_VAL_MAX, -motorPowerRange, motorPowerRange), -255, 255);
 
-  // hVal = constrain(map(data.ch[TX_YAW], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 250), 0, 250);
-  hVal = constrain(map(data.ch[TX_YAW], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 250), 0, 250);
-  vVal = constrain(map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 225), 0, 225);
-
-  //*
-  // sets variable hVal according to position of tx_aux1
-  if (data.ch[TX_AUX1] < SBUS_SWITCH_MIN_THRESHOLD)
-  {
-    // Serial.println("lock in hue val");
-    hVal = 32;
-    // hVal = 32;
-  }
-  //*/
-
-  /*
-  for (int i = 0; i < NUMPIXELS; i++)
-  {
-    pixels.setPixelColor(i, pixels.Color(hVal, 0, 25 + vVal));
-  }
-  pixels.show(); // Send the updated pixel colors to the hardware.
-  //*/
-  // for (int i = 0; i < NUM_LEDS; i++)
-  // {
-  //   leds[i] = CHSV(hVal, 240, 25 + vVal);
-  // }
-  // FastLED.show();
-
   doSineMovement = (data.ch[TX_AUX4] < SBUS_SWITCH_MIN_THRESHOLD) ? true : false;
+  doSineMovement = false; // override
 
   int16_t throttleVal = motor2Val;
+  EVERY_N_MILLIS(250) {
+    // Serial.print("motorPowerRange: " + String(motorPowerRange));
+    // Serial.println(", throttleVal: " + String(motor2Val));
+  }
+
   // float mix = constrain(map(data.ch[TX_ROLL], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1000), 750, 250) / 1000.0; // gives a range of .25-.75
 
   // /*
   // range 0.0-1.0, then an exponent, then map to 250-750
   float mix = constrain(map(data.ch[TX_ROLL], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1000), 0, 1000) / 1000.0; // gives a range of 0-1.0
-  mix = pow(mix, 1.4);
-  mix = map((mix * 1000.0), 1000, 0, 250, 750) / 1000.0; // reverse the input range because we want to reverse the steering
+  // mix = pow(mix, 1.4);
+  // mix = map((mix * 1000.0), 1000, 0, 250, 750) / 1000.0; // reverse the input range because we want to reverse the steering
+  mix = map((mix * 1000.0), 1000, 0, 0, 1000) / 1000.0; // reverse the input range because we want to reverse the steering
   //*/
 
   motor1Val = (throttleVal * (1.0 - mix)) * 2;
@@ -360,19 +314,13 @@ void updateBodyLighting()
   switch (bodyState)
   {
   case NOOD1:
-    tlc.setLED(0, noodVal, 0, 0);
-    tlc.setLED(1, noodVal, 0, 0);
-    tlc.write();
+    // TODO - implement this
     break;
   case NOOD2:
-    tlc.setLED(0, 0, noodVal, 0);
-    tlc.setLED(1, 0, noodVal, 0);
-    tlc.write();
+    // TODO - implement this
     break;
   case BOTH_NOODS:
-    tlc.setLED(0, noodVal, noodVal, 0);
-    tlc.setLED(1, noodVal, noodVal, 0);
-    tlc.write();
+    // TODO - implement this
     break;
   }
 }
