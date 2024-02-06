@@ -50,7 +50,7 @@ void setup()
   pinMode(n00d_2a_Pin, OUTPUT);
   pinMode(n00d_2b_Pin, OUTPUT);
 
-  delay(10000);
+  // delay(10000);
 
   Serial.println("Hello World!");
 }
@@ -77,7 +77,7 @@ void loop()
     doSineAnimation2();
     break;
   case 2:
-    doAllOn();
+    doAllOff();
     break;
   case 5:
     doFlashing();
