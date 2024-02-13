@@ -19,7 +19,7 @@ void BlinkLed(byte num) // Basic blink function
   }
 }
 
-long prevMills;
+long prevSerialPrintMills;
 bool ledState = false;
 uint16_t ledBlinkInterval = 0;
 
@@ -40,13 +40,13 @@ void loop()
 {
   analogWrite(A14, audioVal);
 
-  if (millis() - prevMills > ledBlinkInterval)
+  if (millis() - prevSerialPrintMills > ledBlinkInterval)
   {
     ledState = !ledState;
 
     digitalWrite(LED_BUILTIN, ledState);
 
-    prevMills = millis();
+    prevSerialPrintMills = millis();
   }
 
   if (usbMIDI.read())
