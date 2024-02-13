@@ -2,7 +2,6 @@
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 
-
 #define PIN 17      // On Trinket or Gemma, suggest changing this to 1
 #define NUMPIXELS 2 // Popular NeoPixel ring size
 
@@ -15,9 +14,16 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 // define the methods used in this sketch (prevents compile errors)
 void processMIDI(void);
 void printBytes(const byte *data, unsigned int size);
+uint16_t processDeadband(uint16_t val, uint16_t range);
+
+enum DEADBAND_INPUT_RANGE
+{
+  _256 = 127,
+  _1024 = 1023
+};
 
 byte ledPWMVal = 0;
-byte audioVal = 0;
+uint16_t audioVal = 0;
 byte bodyExpressionVal = 0;
 byte aux1_val = 0;
 byte aux2_val = 0;
@@ -30,6 +36,11 @@ byte neopixelVVal = 0;
 byte neopixel_rVal = 0;
 byte neopixel_gVal = 0;
 byte neopixel_bVal = 0;
+
+byte bitmash_nood1a = 0;
+byte bitmash_nood1b = 0;
+byte bitmash_nood2a = 0;
+byte bitmash_nood2b = 0;
 
 #define LED_PIN 10
 #define PWM_OUT_1 20
@@ -63,10 +74,23 @@ void setup()
   BlinkLed(2);
 
   // from https://www.pjrc.com/teensy/teensy31.html
-  analogWriteResolution(8);
+  analogWriteResolution(10);
 
   pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
 }
+
+long prevSerialPrintMills;
+long serialPrintInterval = 200;
+
+long prevBitmashChangeChannelMills;
+long bitmashChangeChannelInterval = 10;
+byte bitmashSendChannel = 0;
+
+uint16_t bitmashed_out = 0;
+uint16_t bitmashed_outs[] = {0, 0, 0, 0};
+
+float deadbandLowerThreshold = 0.125; // everything lower than this is capped off on the receiving end
+float deadbandUpperThreshold = 0.915; // everything higher than this is capped off on the receiving end
 
 void loop()
 {
@@ -77,9 +101,90 @@ void loop()
   delay(1000);
   */
 
+  //* TMP -> TRYOUT bitmash a byte
+  // byte bitmashed = bitmash_nood1a >> 5;
+  // bitmashed = bitmashed << 2;
+  // bitmashed += bitmash_nood1b >> 5;
+  // bitmashed = bitmashed << 2;
+  // bitmashed += bitmash_nood2a >> 5;
+  // bitmashed = bitmashed << 2;
+  // bitmashed += bitmash_nood2b >> 5;
 
+  if (millis() - prevBitmashChangeChannelMills > bitmashChangeChannelInterval)
+  {
+    bitmashSendChannel++;
+    if (bitmashSendChannel > 3)
+    {
+      bitmashSendChannel = 0;
+    }
 
-  analogWrite(A14, audioVal);
+    prevBitmashChangeChannelMills = millis();
+  }
+
+  switch (bitmashSendChannel)
+  {
+  case 0:
+    bitmashed_out = 0x1 << 9;
+    // bitmashed_out += bitmash_nood1a;
+    bitmashed_out += (bitmash_nood1a >> 2);
+    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    break;
+  case 1:
+    bitmashed_out = 0x1 << 8;
+    // bitmashed_out += bitmash_nood1b;
+    bitmashed_out += (bitmash_nood1b >> 2);
+    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    break;
+  case 2:
+    bitmashed_out = 0x1 << 7;
+    // bitmashed_out += bitmash_nood2a;
+    bitmashed_out += (bitmash_nood2a >> 2);
+    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    break;
+  case 3:
+    bitmashed_out = 0x1 << 6;
+    // bitmashed_out += bitmash_nood2b;
+    bitmashed_out += (bitmash_nood2b >> 2);
+    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    break;
+  }
+
+  bitmashed_out = processDeadband(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+  bitmashed_outs[bitmashSendChannel] = bitmashed_out;
+
+  // HARD overwrite for now, just testing the reliability of this approach
+  // bitmashed_out = 0x1 << 8;
+  // bitmashed_out += (bitmash_nood1b >> 2);
+  // bitmashed_out = processDeadband(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+  // bitmashed_outs[1] = bitmashed_out;
+
+  analogWrite(A14, bitmashed_out);
+
+  if (millis() - prevSerialPrintMills > serialPrintInterval)
+  {
+    Serial.print("bitmash_nood1a: ");
+    Serial.print(bitmash_nood1a);
+    Serial.print(", bitmash_nood1b: ");
+    Serial.print(bitmash_nood1b);
+    Serial.print(", bitmash_nood2a: ");
+    Serial.print(bitmash_nood2a);
+    Serial.print(", bitmash_nood2b: ");
+    Serial.print(bitmash_nood2b);
+    Serial.print(" -> bitmashed_outs: ");
+    Serial.print(bitmashed_outs[0], BIN);
+    Serial.print(", ");
+    Serial.print(bitmashed_outs[1], BIN);
+    Serial.print(", ");
+    Serial.print(bitmashed_outs[2], BIN);
+    Serial.print(", ");
+    Serial.println(bitmashed_outs[3], BIN);
+    prevSerialPrintMills = millis();
+  }
+
+  /*/
+  analogWrite(A14, audioVal << 2); // ORIGINAL
+  //*/
+
   analogWrite(PWM_OUT_1, bodyExpressionVal);
   analogWrite(AUX1_PIN, aux1_val);
   analogWrite(AUX2_PIN, aux2_val);
@@ -88,22 +193,13 @@ void loop()
   // local led as debug indicator
   analogWrite(LED_PIN, ledPWMVal);
 
-  // Serial.println("audioVal: " + String(audioVal));
-  // Serial.println("bodyExpressionVal: " + String(bodyExpressionVal));
-  // Serial.println(">aux1_val:" + String(aux1_val));
-  // Serial.println(">aux2_val:" + String(aux2_val));
-  // Serial.println(">aux3_val:" + String(aux3_val));
-
-
   /*
-  pixels.clear(); // Set all pixel colors to 'off'
-  uint32_t ledstripVal = 0;
-  // ledstripVal = pixels.ColorHSV(neopixelHVal, neopixelSVal, neopixelVVal);
-  ledstripVal = pixels.Color (neopixel_rVal, neopixel_gVal, neopixel_bVal);
-  // hsvVal = pixels.ColorHSV(0, 255, 255);
-  pixels.fill(ledstripVal);
-  pixels.show(); // Send the updated pixel colors to the hardware.
-  //*/
+  Serial.println("audioVal: " + String(audioVal));
+  Serial.println("bodyExpressionVal: " + String(bodyExpressionVal));
+  Serial.println(">aux1_val:" + String(aux1_val));
+  Serial.println(">aux2_val:" + String(aux2_val));
+  Serial.println(">aux3_val:" + String(aux3_val));
+  */
 
   // usbMIDI.read() needs to be called rapidly from loop().  When
   // each MIDI messages arrives, it return true.  The message must
@@ -175,8 +271,9 @@ void processMIDI(void)
     if (channel == 1 && data1 == 0)
     {
       ledPWMVal = data2 * 2;
-      audioVal = data2 * 2;
-      if (audioVal > 128) {
+      audioVal = processDeadband(data2, 256) * 2;
+      if (audioVal > 128)
+      {
         audioVal++; // cheap way to make midi max 127 map to analog max 255
       }
     }
@@ -184,23 +281,26 @@ void processMIDI(void)
     if (channel == 1 && data1 == 1)
     {
       bodyExpressionVal = data2 * 2;
-      if (bodyExpressionVal > 128) {
+      if (bodyExpressionVal > 128)
+      {
         bodyExpressionVal++; // cheap way to make midi max 127 map to analog max 255
       }
     }
-    
+
     if (channel == 1 && data1 == 2)
     {
       aux1_val = data2 * 2;
-      if (aux1_val > 128) {
+      if (aux1_val > 128)
+      {
         aux1_val++; // cheap way to make midi max 127 map to analog max 255
       }
     }
-    
+
     if (channel == 1 && data1 == 3)
     {
       aux2_val = data2 * 2;
-      if (aux2_val > 128) {
+      if (aux2_val > 128)
+      {
         aux2_val++; // cheap way to make midi max 127 map to analog max 255
       }
     }
@@ -208,7 +308,8 @@ void processMIDI(void)
     if (channel == 1 && data1 == 4)
     {
       aux3_val = data2 * 2;
-      if (aux3_val > 128) {
+      if (aux3_val > 128)
+      {
         aux3_val++; // cheap way to make midi max 127 map to analog max 255
       }
     }
@@ -238,6 +339,28 @@ void processMIDI(void)
     {
       neopixel_bVal = data2 * 2;
     }
+
+    if (channel == 1 && data1 == 30)
+    {
+      bitmash_nood1a = data2;
+      // bitmash_nood1a = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
+    }
+    if (channel == 1 && data1 == 31)
+    {
+      bitmash_nood1b = data2;
+      // bitmash_nood1b = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
+    }
+    if (channel == 1 && data1 == 32)
+    {
+      bitmash_nood2a = data2;
+      // bitmash_nood2a = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
+    }
+    if (channel == 1 && data1 == 33)
+    {
+      bitmash_nood2b = data2;
+      // bitmash_nood2b = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
+    }
+
     break;
 
   case usbMIDI.ProgramChange: // 0xC0
@@ -317,6 +440,20 @@ void processMIDI(void)
 
   default:
     Serial.println("Opps, an unknown MIDI message type!");
+  }
+}
+
+uint16_t processDeadband(uint16_t val, uint16_t range)
+{
+  switch (range)
+  {
+  case DEADBAND_INPUT_RANGE::_256:
+    return constrain(map(val, 0, 127, 15, 116), 0, 127);
+    break;
+  case DEADBAND_INPUT_RANGE::_1024:
+    // return constrain(map(val, 0, 1023, 127, 936), 0, 1023);
+    return constrain(map(val, 0, 1023, 130, 936), 0, 1023);
+    break;
   }
 }
 
