@@ -2,19 +2,13 @@
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 
-#define PIN 17      // On Trinket or Gemma, suggest changing this to 1
-#define NUMPIXELS 2 // Popular NeoPixel ring size
-
-// When setting up the NeoPixel library, we tell it how many pixels,
-// and which pin to use to send signals. Note that for older NeoPixel
-// strips you might need to change the third parameter -- see the
-// strandtest example for more information on possible values.
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-
 // define the methods used in this sketch (prevents compile errors)
 void processMIDI(void);
 void printBytes(const byte *data, unsigned int size);
-uint16_t processDeadband(uint16_t val, uint16_t range);
+// uint16_t processDeadband(uint16_t val, uint16_t range);
+uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range);
+uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range);
+void checkIncomingSerial();
 
 enum DEADBAND_INPUT_RANGE
 {
@@ -23,7 +17,7 @@ enum DEADBAND_INPUT_RANGE
 };
 
 byte ledPWMVal = 0;
-uint16_t audioVal = 0;
+byte audioVal = 0;
 byte bodyExpressionVal = 0;
 byte aux1_val = 0;
 byte aux2_val = 0;
@@ -48,6 +42,38 @@ byte bitmash_nood2b = 0;
 #define AUX2_PIN 23
 #define AUX3_PIN 6
 
+byte channelToPrint = 255;
+
+unsigned long prevSerialPrintMills;
+unsigned long serialPrintInterval = 200;
+
+unsigned long prevBitmashChangeChannelMills;
+unsigned long bitmashChangeChannelInterval = 10;
+byte bitmashSendChannel = 0;
+
+uint16_t bitmashed_out = 0;
+uint16_t bitmashed_outs[] = {0, 0, 0, 0};
+
+// FYI -> I manually explored when the values at the receiver start moving.
+// 'deadbandLowerThreshold' is the percentage at the bottom of the range where the values start to move.
+// 'deadbandUpperThreshold' is the percentage at the top of the range where the values start to move.
+float deadbandLowerThreshold = 0.125; // everything lower than this percentage is capped off on the receiving end
+float deadbandUpperThreshold = 0.915; // everything higher than this percentage is capped off on the receiving end
+
+uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896}; // corresponds to upper bits 100, 101, 110, 111
+
+byte n00dSegmentMaxValue = 55;
+
+// methods
+void writeValuesToOutputs();
+void overrideNoodOutputValues();
+void BlinkLed(byte num);
+void updateSelectedNoodSendIndex();
+void calcNoodOutputValues();
+void checkIncomingSerial();
+void updateSerialPrintValues();
+void serialPrintDebugValues();
+
 void BlinkLed(byte num) // Basic blink function
 {
   for (byte i = 0; i < num; i++)
@@ -62,7 +88,7 @@ void BlinkLed(byte num) // Basic blink function
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("Hello World");
+  // Serial.println("Hello World");
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
@@ -74,42 +100,43 @@ void setup()
   BlinkLed(2);
 
   // from https://www.pjrc.com/teensy/teensy31.html
-  analogWriteResolution(10);
+  analogWriteResolution(10); // need 10 bits to be able to encode the n00d protocol
 
-  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  // Serial.println("Press '1', '2', '3', '4' to select the channel to print.");
+  // Serial.println("Press 'a' to print all channels.");
 }
-
-long prevSerialPrintMills;
-long serialPrintInterval = 200;
-
-long prevBitmashChangeChannelMills;
-long bitmashChangeChannelInterval = 10;
-byte bitmashSendChannel = 0;
-
-uint16_t bitmashed_out = 0;
-uint16_t bitmashed_outs[] = {0, 0, 0, 0};
-
-float deadbandLowerThreshold = 0.125; // everything lower than this is capped off on the receiving end
-float deadbandUpperThreshold = 0.915; // everything higher than this is capped off on the receiving end
 
 void loop()
 {
-  /*
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(500);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
-  */
+  checkIncomingSerial();
 
-  //* TMP -> TRYOUT bitmash a byte
-  // byte bitmashed = bitmash_nood1a >> 5;
-  // bitmashed = bitmashed << 2;
-  // bitmashed += bitmash_nood1b >> 5;
-  // bitmashed = bitmashed << 2;
-  // bitmashed += bitmash_nood2a >> 5;
-  // bitmashed = bitmashed << 2;
-  // bitmashed += bitmash_nood2b >> 5;
+  updateSelectedNoodSendIndex();
 
+  calcNoodOutputValues();
+
+  // DEBUG -> hard overwrite -> use to test the reliability of the approach
+  if (channelToPrint != 'a' || channelToPrint != 'x')
+  {
+    overrideNoodOutputValues();
+  }
+
+  updateSerialPrintValues();
+
+  writeValuesToOutputs();
+
+  // usbMIDI.read() needs to be called rapidly from loop().  When
+  // each MIDI messages arrives, it return true.  The message must
+  // be fully processed before usbMIDI.read() is called again.
+  if (usbMIDI.read())
+  {
+    processMIDI();
+  }
+
+  // DO NOT INTRODUCE A DELAY -> the usbMIDI.read() needs to be called rapidly from loop()
+}
+
+void updateSelectedNoodSendIndex()
+{
   if (millis() - prevBitmashChangeChannelMills > bitmashChangeChannelInterval)
   {
     bitmashSendChannel++;
@@ -120,96 +147,156 @@ void loop()
 
     prevBitmashChangeChannelMills = millis();
   }
+}
 
+void calcNoodOutputValues()
+{
   switch (bitmashSendChannel)
   {
   case 0:
-    bitmashed_out = 0x1 << 9;
-    // bitmashed_out += bitmash_nood1a;
-    bitmashed_out += (bitmash_nood1a >> 2);
-    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    bitmashed_out = n00dSegmentIdentifiers[0];
+    bitmashed_out += map(bitmash_nood1a, 0, 127, 0, n00dSegmentMaxValue);
     break;
   case 1:
-    bitmashed_out = 0x1 << 8;
-    // bitmashed_out += bitmash_nood1b;
-    bitmashed_out += (bitmash_nood1b >> 2);
-    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    bitmashed_out = n00dSegmentIdentifiers[1];
+    bitmashed_out += map(bitmash_nood1b, 0, 127, 0, n00dSegmentMaxValue);
     break;
   case 2:
-    bitmashed_out = 0x1 << 7;
-    // bitmashed_out += bitmash_nood2a;
-    bitmashed_out += (bitmash_nood2a >> 2);
-    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    bitmashed_out = n00dSegmentIdentifiers[2];
+    bitmashed_out += map(bitmash_nood2a, 0, 127, 0, n00dSegmentMaxValue);
     break;
   case 3:
-    bitmashed_out = 0x1 << 6;
-    // bitmashed_out += bitmash_nood2b;
-    bitmashed_out += (bitmash_nood2b >> 2);
-    // bitmashed_out += 1; // this may not be necessary but could help prevent the signal jitter from allowing the higher bits from slipping into a lower bit's position
+    bitmashed_out = n00dSegmentIdentifiers[3];
+    bitmashed_out += map(bitmash_nood2b, 0, 127, 0, n00dSegmentMaxValue);
     break;
   }
 
-  bitmashed_out = processDeadband(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+  bitmashed_out = mapToActualMinMax_1024(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
   bitmashed_outs[bitmashSendChannel] = bitmashed_out;
+}
 
-  // HARD overwrite for now, just testing the reliability of this approach
-  // bitmashed_out = 0x1 << 8;
-  // bitmashed_out += (bitmash_nood1b >> 2);
-  // bitmashed_out = processDeadband(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
-  // bitmashed_outs[1] = bitmashed_out;
-
-  analogWrite(A14, bitmashed_out);
-
-  if (millis() - prevSerialPrintMills > serialPrintInterval)
-  {
-    Serial.print("bitmash_nood1a: ");
-    Serial.print(bitmash_nood1a);
-    Serial.print(", bitmash_nood1b: ");
-    Serial.print(bitmash_nood1b);
-    Serial.print(", bitmash_nood2a: ");
-    Serial.print(bitmash_nood2a);
-    Serial.print(", bitmash_nood2b: ");
-    Serial.print(bitmash_nood2b);
-    Serial.print(" -> bitmashed_outs: ");
-    Serial.print(bitmashed_outs[0], BIN);
-    Serial.print(", ");
-    Serial.print(bitmashed_outs[1], BIN);
-    Serial.print(", ");
-    Serial.print(bitmashed_outs[2], BIN);
-    Serial.print(", ");
-    Serial.println(bitmashed_outs[3], BIN);
-    prevSerialPrintMills = millis();
-  }
-
-  /*/
-  analogWrite(A14, audioVal << 2); // ORIGINAL
-  //*/
-
-  analogWrite(PWM_OUT_1, bodyExpressionVal);
+void writeValuesToOutputs()
+{
+  analogWrite(A14, bitmashed_out); // n00ds
+  analogWrite(PWM_OUT_1, audioVal);
   analogWrite(AUX1_PIN, aux1_val);
   analogWrite(AUX2_PIN, aux2_val);
   analogWrite(AUX3_PIN, aux3_val);
 
   // local led as debug indicator
   analogWrite(LED_PIN, ledPWMVal);
+}
 
-  /*
-  Serial.println("audioVal: " + String(audioVal));
-  Serial.println("bodyExpressionVal: " + String(bodyExpressionVal));
-  Serial.println(">aux1_val:" + String(aux1_val));
-  Serial.println(">aux2_val:" + String(aux2_val));
-  Serial.println(">aux3_val:" + String(aux3_val));
-  */
-
-  // usbMIDI.read() needs to be called rapidly from loop().  When
-  // each MIDI messages arrives, it return true.  The message must
-  // be fully processed before usbMIDI.read() is called again.
-  if (usbMIDI.read())
+void overrideNoodOutputValues()
+{
+  switch (channelToPrint)
   {
-    processMIDI();
+  case 0:
+    bitmashed_out = n00dSegmentIdentifiers[0];
+    bitmashed_out += map(bitmash_nood1a, 0, 127, 0, n00dSegmentMaxValue);
+    bitmashed_out = mapToActualMinMax_1024(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+    bitmashed_outs[0] = bitmashed_out;
+    break;
+  case 1:
+    bitmashed_out = n00dSegmentIdentifiers[1];
+    bitmashed_out += map(bitmash_nood1b, 0, 127, 0, n00dSegmentMaxValue);
+    bitmashed_out = mapToActualMinMax_1024(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+    bitmashed_outs[1] = bitmashed_out;
+    break;
+  case 2:
+    bitmashed_out = n00dSegmentIdentifiers[2];
+    bitmashed_out += map(bitmash_nood2a, 0, 127, 0, n00dSegmentMaxValue);
+    bitmashed_out = mapToActualMinMax_1024(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+    bitmashed_outs[2] = bitmashed_out;
+    break;
+  case 3:
+    bitmashed_out = n00dSegmentIdentifiers[3];
+    bitmashed_out += map(bitmash_nood2b, 0, 127, 0, n00dSegmentMaxValue);
+    bitmashed_out = mapToActualMinMax_1024(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
+    bitmashed_outs[3] = bitmashed_out;
+    break;
   }
+}
 
-  // delay(1000/100);
+void checkIncomingSerial()
+{
+  if (Serial.available() > 0)
+  {
+    char inChar = Serial.read();
+    switch (inChar)
+    {
+    case '1':
+      channelToPrint = 0;
+      break;
+    case '2':
+      channelToPrint = 1;
+      break;
+    case '3':
+      channelToPrint = 2;
+      break;
+    case '4':
+      channelToPrint = 3;
+      break;
+    case 'a':
+      channelToPrint = 100;
+      break;
+    case 'x':
+      channelToPrint = 255;
+      break;
+    }
+
+    // don't know if this is necessary but I always flush the serial buffer
+    while (Serial.available() > 0)
+    {
+      Serial.read();
+    }
+  }
+}
+
+void updateSerialPrintValues()
+{
+  if (millis() - prevSerialPrintMills > serialPrintInterval)
+  {
+    serialPrintDebugValues();
+    prevSerialPrintMills = millis();
+  }
+}
+void serialPrintDebugValues()
+{
+
+  //*
+  Serial.print("audioVal: " + String(audioVal));
+  Serial.print(", aux1_val: " + String(aux1_val));
+  Serial.print(", aux2_val: " + String(aux2_val));
+  Serial.print(", aux3_val: " + String(aux3_val));
+  Serial.println(", ledPWMVal: " + String(ledPWMVal));
+  //*/
+
+  //*
+  Serial.print("noods: ");
+  Serial.print(bitmash_nood1a + String(", "));
+  Serial.print(bitmash_nood1b + String(", "));
+  Serial.print(bitmash_nood2a + String(", "));
+  Serial.print(bitmash_nood2b + String(", "));
+  Serial.print("bitmashed: nood1a: ");
+  Serial.print(bitmashed_outs[0]);
+  Serial.print(", nood1b: ");
+  Serial.print(bitmashed_outs[1]);
+  Serial.print(", nood2a: ");
+  Serial.print(bitmashed_outs[2]);
+  Serial.print(", nood2b: ");
+  Serial.print(bitmashed_outs[3]);
+  Serial.print(" -> bitmashed_outs: ");
+  Serial.print(bitmashed_outs[0], BIN);
+  Serial.print(", ");
+  Serial.print(bitmashed_outs[1], BIN);
+  Serial.print(", ");
+  Serial.print(bitmashed_outs[2], BIN);
+  Serial.print(", ");
+  Serial.println(bitmashed_outs[3], BIN);
+  //*/
+
+  Serial.println();
 }
 
 void processMIDI(void)
@@ -271,7 +358,8 @@ void processMIDI(void)
     if (channel == 1 && data1 == 0)
     {
       ledPWMVal = data2 * 2;
-      audioVal = processDeadband(data2, 256) * 2;
+      audioVal = mapToActualMinMax_256(data2, DEADBAND_INPUT_RANGE::_256) * 2;
+      // audioVal = data2 * 2;
       if (audioVal > 128)
       {
         audioVal++; // cheap way to make midi max 127 map to analog max 255
@@ -340,25 +428,22 @@ void processMIDI(void)
       neopixel_bVal = data2 * 2;
     }
 
+    // n00d individually addressing
     if (channel == 1 && data1 == 30)
     {
       bitmash_nood1a = data2;
-      // bitmash_nood1a = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
     }
     if (channel == 1 && data1 == 31)
     {
       bitmash_nood1b = data2;
-      // bitmash_nood1b = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
     }
     if (channel == 1 && data1 == 32)
     {
       bitmash_nood2a = data2;
-      // bitmash_nood2a = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
     }
     if (channel == 1 && data1 == 33)
     {
       bitmash_nood2b = data2;
-      // bitmash_nood2b = processDeadband(data2, DEADBAND_INPUT_RANGE::_256);
     }
 
     break;
@@ -443,13 +528,20 @@ void processMIDI(void)
   }
 }
 
-uint16_t processDeadband(uint16_t val, uint16_t range)
+uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range)
 {
   switch (range)
   {
   case DEADBAND_INPUT_RANGE::_256:
     return constrain(map(val, 0, 127, 15, 116), 0, 127);
     break;
+  }
+}
+
+uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range)
+{
+  switch (range)
+  {
   case DEADBAND_INPUT_RANGE::_1024:
     // return constrain(map(val, 0, 1023, 127, 936), 0, 1023);
     return constrain(map(val, 0, 1023, 130, 936), 0, 1023);
