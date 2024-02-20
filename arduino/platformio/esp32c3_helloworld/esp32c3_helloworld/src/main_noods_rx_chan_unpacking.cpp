@@ -42,12 +42,16 @@ bool sbusLost = false;
 #define SBUS_PACKET_PRINT_INTERVAL 100 // ms
 u_long sbusPacketPrintPrevTime = 0;
 
-uint8_t n00d1a, n00d1b, n00d2a, n00d2b;
+int16_t n00d1a, n00d1b, n00d2a, n00d2b;
 uint16_t throttle, throttleAdjusted;
 
+int16_t n00dsAvg[] = {0, 0, 0, 0};
+uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
+
 void parseSBUS(bool serialPrint);
+void updateBodyValues();
 void updateBodyLighting();
-void updateSerialControl();
+void updateSerialIO();
 void checkIncomingSerial();
 void setn00d(uint8_t pin, uint8_t val);
 
@@ -83,54 +87,77 @@ void loop()
   // read SBUS
   parseSBUS(false);
 
+  updateBodyValues();
   updateBodyLighting();
-  updateSerialControl();
+
+  updateSerialIO();
 
   delay(1000 / 300);
 }
 
-void updateBodyLighting()
+void updateBodyValues()
 {
   // map throttle range to 0-1023
   throttle = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1023);
 
   throttleAdjusted = 0; // used to store the adjusted throttle value
 
-  if (throttle & (0x1 << 9)) // 512
+  // if (throttle & (0x1 << 9)) // 512
+  // if (throttle & n00dSegmentIdentifiers[0] == n00dSegmentIdentifiers[0]) // 512
+  if (throttle >> 7 == 0x4) // 0b100
   {
     // throttleAdjusted = throttle - (throttle >> 5);
     throttleAdjusted = throttle - 9;
-    n00d1a = throttleAdjusted & 0x3F;
-    n00d1a = map(constrain(n00d1a, 0, 31), 0, 31, 0, 255);
+    n00d1a = (throttle & 0x7E) - 9;
+    n00d1a = map(constrain(n00d1a, 0, 55), 0, 55, 0, 255);
   }
-  if (throttle & (0x1 << 8)) // 256
+  // if (throttle & (0x1 << 8)) // 256
+  // if (throttle & n00dSegmentIdentifiers[1] == n00dSegmentIdentifiers[1]) // 640
+  if (throttle >> 7 == 0x5) // 0b101
   {
     // throttle -= throttle - (throttle >> 5);
     throttleAdjusted = throttle - 10;
-    n00d1b = throttleAdjusted & 0x3F;
-    n00d1b = map(constrain(n00d1b, 0, 31), 0, 31, 0, 255);
+    n00d1b = (throttle & 0x7E) - 10;
+    n00d1b = map(constrain(n00d1b, 0, 55), 0, 55, 0, 255);
   }
-  if (throttle & (0x1 << 7)) // 128
+  // if (throttle & (0x1 << 7)) // 128
+  // if (throttle & n00dSegmentIdentifiers[2] == n00dSegmentIdentifiers[2]) // 768
+  if (throttle >> 7 == 0x6) // 0b110
   {
-    throttleAdjusted = throttle - 8;
-    n00d2a = throttleAdjusted & 0x3F;
-    n00d2a = map(constrain(n00d2a, 0, 31), 0, 31, 0, 255);
+    throttleAdjusted = throttle - 9;
+    n00d2a = (throttle & 0x7E) - 9;
+    n00d2a = map(constrain(n00d2a, 0, 55), 0, 55, 0, 255);
   }
-  if (throttle & (0x1 << 6)) // 64
+  // if (throttle & (0x1 << 6)) // 64
+  // if (throttle & n00dSegmentIdentifiers[3] == n00dSegmentIdentifiers[3]) // 896
+  if (throttle >> 7 == 0x7) // 0b111
   {
-    throttleAdjusted = throttle - 6;
-    n00d2b = throttleAdjusted & 0x3F;
-    n00d2b = map(constrain(n00d2b, 0, 31), 0, 31, 0, 255);
+    throttleAdjusted = throttle - 9;
+    n00d2b = (throttle & 0x7E) - 9;
+    n00d2b = map(constrain(n00d2b, 0, 55), 0, 55, 0, 255);
   }
 
-  setn00d(n00d_1a_Pin, n00d1a);
-  setn00d(n00d_1b_Pin, n00d1b);
-  setn00d(n00d_2a_Pin, n00d2a);
-  setn00d(n00d_2b_Pin, n00d2b);
+  n00dsAvg[0] = 0.85 * n00dsAvg[0] + 0.15 * n00d1a;
+  n00dsAvg[1] = 0.85 * n00dsAvg[1] + 0.15 * n00d1b;
+  n00dsAvg[2] = 0.85 * n00dsAvg[2] + 0.15 * n00d2a;
+  n00dsAvg[3] = 0.85 * n00dsAvg[3] + 0.15 * n00d2b;
 }
 
-uint8_t channelToPrint = 0;
-void updateSerialControl()
+void updateBodyLighting()
+{
+  // setn00d(n00d_1a_Pin, n00d1a);
+  // setn00d(n00d_1b_Pin, n00d1b);
+  // setn00d(n00d_2a_Pin, n00d2a);
+  // setn00d(n00d_2b_Pin, n00d2b);
+
+  setn00d(n00d_1a_Pin, n00dsAvg[0]);
+  setn00d(n00d_1b_Pin, n00dsAvg[1]);
+  setn00d(n00d_2a_Pin, n00dsAvg[2]);
+  setn00d(n00d_2b_Pin, n00dsAvg[3]);
+}
+
+uint8_t channelToPrint = 255;
+void updateSerialIO()
 {
   checkIncomingSerial();
 
@@ -152,13 +179,31 @@ void updateSerialControl()
     }
     if (channelToPrint == 2) // only nood2a
     {
-      Serial.print("n00d2a: ");
+      if (throttle & (0x1 << 7)) // 128
+      {
+        Serial.print("TX_THROTTLE: ");
+        Serial.print(data.ch[TX_THROTTLE]);
+        Serial.print("\t throttle: ");
+        Serial.print(throttle);
+        Serial.print("\t (in binary: ");
+        Serial.print(throttle, BIN);
+      }
+      Serial.print("\t n00d2a: ");
       Serial.print(n00d2a);
       Serial.print("\t in binary: ");
       Serial.println(n00d2a, BIN);
     }
     if (channelToPrint == 3) // only nood2b
     {
+      if (throttle & (0x1 << 6)) // 64
+      {
+        Serial.print("TX_THROTTLE: ");
+        Serial.print(data.ch[TX_THROTTLE]);
+        Serial.print("\t throttle: ");
+        Serial.print(throttle);
+        Serial.print("\t (in binary: ");
+        Serial.print(throttle, BIN);
+      }
       Serial.print("n00d2b: ");
       Serial.print(n00d2b);
       Serial.print("\t in binary: ");
@@ -166,17 +211,12 @@ void updateSerialControl()
     }
     if (channelToPrint == 100) // everything
     {
-      Serial.print("TX_THROTTLE: ");
+       Serial.print("TX_THROTTLE: ");
       Serial.print(data.ch[TX_THROTTLE]);
       Serial.print("\t throttle: ");
       Serial.print(throttle);
       Serial.print("\t (in binary: ");
-      Serial.print(throttle, BIN);
-      Serial.print(")\t throttleAdjusted: ");
-      Serial.print(throttleAdjusted);
-      Serial.print("\t (in binary: ");
-      Serial.print(throttleAdjusted, BIN);
-      Serial.println(")");
+      Serial.println(throttle, BIN);
       Serial.print("n00d1a: ");
       Serial.print(n00d1a);
       Serial.print("\t n00d1b: ");
