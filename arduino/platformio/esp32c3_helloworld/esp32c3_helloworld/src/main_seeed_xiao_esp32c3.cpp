@@ -10,8 +10,6 @@
 #define PIN D9
 #define NUMPIXELS 3
 
-#define MOUTH_LED_OUT D9
-
 // When setting up the NeoPixel library, we tell it how many pixels,
 // and which pin to use to send signals. Note that for older NeoPixel
 // strips you might need to change the third parameter -- see the
@@ -28,13 +26,13 @@ bfs::SbusData data;
 
 #define PIN_MOTOR1_A D5
 #define PIN_MOTOR1_B D4
-#define CH_MOTOR1_1 0 // 16 Channels (0-15) are availible
-#define CH_MOTOR1_2 1 // Make sure each pin is a different channel and not in use by other PWM devices (servos, LED's, etc)
+#define CH_MOTOR1_1 2 // 16 Channels (0-15) are availible
+#define CH_MOTOR1_2 3 // Make sure each pin is a different channel and not in use by other PWM devices (servos, LED's, etc)
 
-#define PIN_MOTOR2_A D3
-#define PIN_MOTOR2_B D2
-#define CH_MOTOR2_1 2 // 16 Channels (0-15) are availible
-#define CH_MOTOR2_2 3 // Make sure each pin is a different channel and not in use by other PWM devices (servos, LED's, etc)
+#define PIN_MOTOR2_A D2
+#define PIN_MOTOR2_B D3
+#define CH_MOTOR2_1 4 // 16 Channels (0-15) are availible
+#define CH_MOTOR2_2 5 // Make sure each pin is a different channel and not in use by other PWM devices (servos, LED's, etc)
 
 // Optional Parameters
 #define RES 8     // Resolution in bits:  8 (0-255),  12 (0-4095), or 16 (0-65535)
@@ -46,8 +44,8 @@ MX1508 motorB(PIN_MOTOR2_A, PIN_MOTOR2_B, CH_MOTOR2_1, CH_MOTOR2_2, 8, 2500); //
 u_long sbusPrevPacketTime;
 bool sbusLost = false;
 
-#define SBUS_VAL_MIN 176
-#define SBUS_VAL_MAX 1800
+#define SBUS_VAL_MIN 191
+#define SBUS_VAL_MAX 1793
 #define SBUS_VAL_CENTER 988
 #define SBUS_VAL_DEADBAND 5
 #define SBUS_LOST_TIMEOUT 100
@@ -94,6 +92,23 @@ byte vVal = 0;
 int16_t motor1Val;
 int16_t motor2Val;
 
+int16_t n00d1a, n00d1b, n00d2a, n00d2b;
+uint16_t throttle, throttleAdjusted;
+
+int16_t n00dsAvg[] = {0, 0, 0, 0};
+uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
+
+#define n00d_1a_Pin D1
+#define n00d_1b_Pin D10
+#define n00d_2a_Pin D0
+#define n00d_2b_Pin D8
+
+void updateBodyValues();
+void updateBodyLighting();
+void updateSerialIO();
+void checkIncomingSerial();
+void setn00d(uint8_t pin, uint8_t val);
+
 // define methods
 void driveMotors();
 void parseSBUS(bool serialPrint);
@@ -111,6 +126,16 @@ void setup()
 
   // pinMode(MOUTH_LED_OUT, OUTPUT);
   // digitalWrite(MOUTH_LED_OUT, LOW);
+
+  pinMode(n00d_1a_Pin, OUTPUT);
+  pinMode(n00d_1b_Pin, OUTPUT);
+  pinMode(n00d_2a_Pin, OUTPUT);
+  pinMode(n00d_2b_Pin, OUTPUT);
+
+  setn00d(n00d_1a_Pin, 0);
+  setn00d(n00d_1b_Pin, 0);
+  setn00d(n00d_2a_Pin, 0);
+  setn00d(n00d_2b_Pin, 0);
 
   // by default, let's have the program assume sbus is lost
   sbusPrevPacketTime = -SBUS_LOST_TIMEOUT;
@@ -132,8 +157,11 @@ void loop()
 
   updateHeadBodyState();
 
-  updateHeadLighting();
+  updateBodyValues();
   updateBodyLighting();
+
+  updateHeadLighting();
+  // updateBodyLighting();
 
   byte motorPowerRange = 255;
   if (data.ch[TX_AUX4] > SBUS_SWITCH_MIN_THRESHOLD)
@@ -156,7 +184,8 @@ void loop()
   doSineMovement = false; // override
 
   int16_t throttleVal = motor2Val;
-  EVERY_N_MILLIS(250) {
+  EVERY_N_MILLIS(250)
+  {
     // Serial.print("motorPowerRange: " + String(motorPowerRange));
     // Serial.println(", throttleVal: " + String(motor2Val));
   }
@@ -175,7 +204,7 @@ void loop()
   motor2Val = (throttleVal * mix) * 2;
 
   // only applies if doSineMovement is true
-  sinCounterIncrement = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 200, 1000) / 5000.0;
+  // sinCounterIncrement = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 200, 1000) / 5000.0;
   sinCounterIncrement = 550 / 5000.0; // override for testing
   float sinMulFactor = .9;
   sinMulFactor = constrain(map(data.ch[TX_AUX3], SBUS_VAL_MIN, SBUS_VAL_MAX, 450, 900), 450, 900) / 1000.0;
@@ -198,6 +227,184 @@ void loop()
 
   // delay a little.
   delay(1000 / 200);
+}
+
+void updateBodyValues()
+{
+  // map throttle range to 0-1023
+  throttle = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1023);
+
+  throttleAdjusted = 0; // used to store the adjusted throttle value
+
+  // if (throttle & (0x1 << 9)) // 512
+  // if (throttle & n00dSegmentIdentifiers[0] == n00dSegmentIdentifiers[0]) // 512
+  if (throttle >> 7 == 0x4) // 0b100
+  {
+    // throttleAdjusted = throttle - (throttle >> 5);
+    throttleAdjusted = throttle - 9;
+    n00d1a = (throttle & 0x7E) - 9;
+    n00d1a = map(constrain(n00d1a, 0, 55), 0, 55, 0, 255);
+  }
+  // if (throttle & (0x1 << 8)) // 256
+  // if (throttle & n00dSegmentIdentifiers[1] == n00dSegmentIdentifiers[1]) // 640
+  if (throttle >> 7 == 0x5) // 0b101
+  {
+    // throttle -= throttle - (throttle >> 5);
+    throttleAdjusted = throttle - 10;
+    n00d1b = (throttle & 0x7E) - 10;
+    n00d1b = map(constrain(n00d1b, 0, 55), 0, 55, 0, 255);
+  }
+  // if (throttle & (0x1 << 7)) // 128
+  // if (throttle & n00dSegmentIdentifiers[2] == n00dSegmentIdentifiers[2]) // 768
+  if (throttle >> 7 == 0x6) // 0b110
+  {
+    throttleAdjusted = throttle - 9;
+    n00d2a = (throttle & 0x7E) - 9;
+    n00d2a = map(constrain(n00d2a, 0, 55), 0, 55, 0, 255);
+  }
+  // if (throttle & (0x1 << 6)) // 64
+  // if (throttle & n00dSegmentIdentifiers[3] == n00dSegmentIdentifiers[3]) // 896
+  if (throttle >> 7 == 0x7) // 0b111
+  {
+    throttleAdjusted = throttle - 9;
+    n00d2b = (throttle & 0x7E) - 9;
+    n00d2b = map(constrain(n00d2b, 0, 55), 0, 55, 0, 255);
+  }
+
+  n00dsAvg[0] = 0.85 * n00dsAvg[0] + 0.15 * n00d1a;
+  n00dsAvg[1] = 0.85 * n00dsAvg[1] + 0.15 * n00d1b;
+  n00dsAvg[2] = 0.85 * n00dsAvg[2] + 0.15 * n00d2a;
+  n00dsAvg[3] = 0.85 * n00dsAvg[3] + 0.15 * n00d2b;
+}
+
+void updateBodyLighting()
+{
+  // setn00d(n00d_1a_Pin, n00d1a);
+  // setn00d(n00d_1b_Pin, n00d1b);
+  // setn00d(n00d_2a_Pin, n00d2a);
+  // setn00d(n00d_2b_Pin, n00d2b);
+
+  setn00d(n00d_1a_Pin, n00dsAvg[0]);
+  setn00d(n00d_1b_Pin, n00dsAvg[1]);
+  setn00d(n00d_2a_Pin, n00dsAvg[2]);
+  setn00d(n00d_2b_Pin, n00dsAvg[3]);
+  // setn00d(n00d_1a_pwm_channel, n00dsAvg[0]);
+  // setn00d(n00d_1b_pwm_channel, n00dsAvg[1]);
+  // setn00d(n00d_2a_pwm_channel, n00dsAvg[2]);
+  // setn00d(n00d_2b_pwm_channel, n00dsAvg[3]);
+}
+
+uint8_t channelToPrint = 255;
+void updateSerialIO()
+{
+  checkIncomingSerial();
+
+  EVERY_N_MILLIS(100)
+  {
+    if (channelToPrint == 0) // only nood1a
+    {
+      Serial.print("n00d1a: ");
+      Serial.print(n00d1a);
+      Serial.print("\t in binary: ");
+      Serial.println(n00d1a, BIN);
+    }
+    if (channelToPrint == 1) // only nood1b
+    {
+      Serial.print("n00d1b: ");
+      Serial.print(n00d1b);
+      Serial.print("\t in binary: ");
+      Serial.println(n00d1b, BIN);
+    }
+    if (channelToPrint == 2) // only nood2a
+    {
+      if (throttle & (0x1 << 7)) // 128
+      {
+        Serial.print("TX_THROTTLE: ");
+        Serial.print(data.ch[TX_THROTTLE]);
+        Serial.print("\t throttle: ");
+        Serial.print(throttle);
+        Serial.print("\t (in binary: ");
+        Serial.print(throttle, BIN);
+      }
+      Serial.print("\t n00d2a: ");
+      Serial.print(n00d2a);
+      Serial.print("\t in binary: ");
+      Serial.println(n00d2a, BIN);
+    }
+    if (channelToPrint == 3) // only nood2b
+    {
+      if (throttle & (0x1 << 6)) // 64
+      {
+        Serial.print("TX_THROTTLE: ");
+        Serial.print(data.ch[TX_THROTTLE]);
+        Serial.print("\t throttle: ");
+        Serial.print(throttle);
+        Serial.print("\t (in binary: ");
+        Serial.print(throttle, BIN);
+      }
+      Serial.print("n00d2b: ");
+      Serial.print(n00d2b);
+      Serial.print("\t in binary: ");
+      Serial.println(n00d2b, BIN);
+    }
+    if (channelToPrint == 100) // everything
+    {
+      Serial.print("TX_THROTTLE: ");
+      Serial.print(data.ch[TX_THROTTLE]);
+      Serial.print("\t throttle: ");
+      Serial.print(throttle);
+      Serial.print("\t (in binary: ");
+      Serial.println(throttle, BIN);
+      Serial.print("n00d1a: ");
+      Serial.print(n00d1a);
+      Serial.print("\t n00d1b: ");
+      Serial.print(n00d1b);
+      Serial.print("\t n00d2a: ");
+      Serial.print(n00d2a);
+      Serial.print("\t n00d2b: ");
+      Serial.println(n00d2b);
+      Serial.println("");
+    }
+  }
+}
+
+void checkIncomingSerial()
+{
+  if (Serial.available() > 0)
+  {
+    char inChar = Serial.read();
+    switch (inChar)
+    {
+    case '1':
+      channelToPrint = 0;
+      break;
+    case '2':
+      channelToPrint = 1;
+      break;
+    case '3':
+      channelToPrint = 2;
+      break;
+    case '4':
+      channelToPrint = 3;
+      break;
+    case 'a':
+      channelToPrint = 100;
+      break;
+    case 'x':
+      channelToPrint = 255;
+      break;
+    }
+
+    while (Serial.available() > 0)
+    {
+      Serial.read();
+    }
+  }
+}
+
+void setn00d(uint8_t pin, uint8_t val)
+{
+  analogWrite(pin, (255 - val));
 }
 
 void parseSBUS(bool serialPrint)
@@ -304,25 +511,6 @@ void updateHeadLighting()
     break;
   }
   pixels.show(); // Send the updated pixel colors to the hardware.
-}
-
-void updateBodyLighting()
-{
-  // throttle
-  float noodVal = constrain(map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 65535), 0, 65535);
-
-  switch (bodyState)
-  {
-  case NOOD1:
-    // TODO - implement this
-    break;
-  case NOOD2:
-    // TODO - implement this
-    break;
-  case BOTH_NOODS:
-    // TODO - implement this
-    break;
-  }
 }
 
 void driveMotors()
