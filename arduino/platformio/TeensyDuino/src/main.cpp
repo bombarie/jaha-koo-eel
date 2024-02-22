@@ -110,6 +110,7 @@ void loop()
 {
   checkIncomingSerial();
 
+  // handles cycling through the n00d channels at fixed intervals
   updateSelectedNoodSendIndex();
 
   calcNoodOutputValues();
@@ -120,7 +121,7 @@ void loop()
     overrideNoodOutputValues();
   }
 
-  updateSerialPrintValues();
+  // updateSerialPrintValues();
 
   writeValuesToOutputs();
 
@@ -177,13 +178,13 @@ void calcNoodOutputValues()
 
 void writeValuesToOutputs()
 {
-  analogWrite(A14, bitmashed_out); // n00ds
-  analogWrite(PWM_OUT_1, audioVal);
-  analogWrite(AUX1_PIN, aux1_val);
-  analogWrite(AUX2_PIN, aux2_val);
-  analogWrite(AUX3_PIN, aux3_val);
+  analogWrite(A14, bitmashed_out);      // n00ds
+  analogWrite(PWM_OUT_1, audioVal * 4); // account for 8-bit to 10-bit conversion
+  analogWrite(AUX1_PIN, aux1_val * 4);  // account for 8-bit to 10-bit conversion
+  analogWrite(AUX2_PIN, aux2_val * 4);  // account for 8-bit to 10-bit conversion
+  analogWrite(AUX3_PIN, aux3_val * 4);  // account for 8-bit to 10-bit conversion
 
-  // local led as debug indicator
+  // DEBUG output - local led as debug indicator
   analogWrite(LED_PIN, ledPWMVal);
 }
 
@@ -533,7 +534,7 @@ uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range)
   switch (range)
   {
   case DEADBAND_INPUT_RANGE::_256:
-    return constrain(map(val, 0, 127, 15, 116), 0, 127);
+    return constrain(map(val, 0, 127, 10, 117), 0, 127);
     break;
   }
 }
