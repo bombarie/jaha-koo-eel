@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <ESP32MX1508.h>
-#include <Adafruit_BusIO_Register.h>
+#include <EelMotor.h>
+#include <Wire.h>
 #include "sbus.h"
 #include <HardwareSerial.h>
 #include <Adafruit_NeoPixel.h>
@@ -24,30 +24,28 @@ bfs::SbusRx sbus_rx(&MySerial0, D7, D6, true, false);
 /* SBUS data */
 bfs::SbusData data;
 
-#define PIN_MOTOR1_A D5
-#define PIN_MOTOR1_B D4
-#define CH_MOTOR1_1 2 // 16 Channels (0-15) are availible
-#define CH_MOTOR1_2 3 // Make sure each pin is a different channel and not in use by other PWM devices (servos, LED's, etc)
+#define motor1a_pin D5
+#define motor1b_pin D4
+#define motor2a_pin D3
+#define motor2b_pin D2
 
-#define PIN_MOTOR2_A D2
-#define PIN_MOTOR2_B D3
-#define CH_MOTOR2_1 4 // 16 Channels (0-15) are availible
-#define CH_MOTOR2_2 5 // Make sure each pin is a different channel and not in use by other PWM devices (servos, LED's, etc)
+#define motor1_chan 4 // 6 Channels (ESP32-C3) (0-5) are availible
+#define motor2_chan 5 // 6 Channels (ESP32-C3) (0-5) are availible
 
-// Optional Parameters
-#define RES 8     // Resolution in bits:  8 (0-255),  12 (0-4095), or 16 (0-65535)
-#define FREQ 5000 // PWM Frequency in Hz
+// setting PWM properties
+const uint32_t freq = 2500;
+const uint8_t resolution = 8;
 
-MX1508 motorA(PIN_MOTOR1_A, PIN_MOTOR1_B, CH_MOTOR1_1, CH_MOTOR1_2, 8, 2500); // Default-  8 bit resoluion at 2500 Hz
-MX1508 motorB(PIN_MOTOR2_A, PIN_MOTOR2_B, CH_MOTOR2_1, CH_MOTOR2_2, 8, 2500); // Default-  8 bit resoluion at 2500 Hz
+EelMotor motor1(motor1a_pin, motor1b_pin, motor1_chan, resolution, freq);
+EelMotor motor2(motor2a_pin, motor2b_pin, motor2_chan, resolution, freq);
 
 u_long sbusPrevPacketTime;
 bool sbusLost = false;
 
 #define SBUS_VAL_MIN 191
 #define SBUS_VAL_MAX 1793
-#define SBUS_VAL_CENTER 988
-#define SBUS_VAL_DEADBAND 5
+#define SBUS_VAL_CENTER 992
+#define SBUS_VAL_DEADBAND 6
 #define SBUS_LOST_TIMEOUT 100
 #define SBUS_SWITCH_MIN 192
 #define SBUS_SWITCH_MAX 1792
@@ -95,7 +93,8 @@ int16_t motor2Val;
 int16_t n00d1a, n00d1b, n00d2a, n00d2b;
 uint16_t throttle, throttleAdjusted;
 
-int16_t n00dsAvg[] = {0, 0, 0, 0};
+int16_t noodVals[] = {0, 0, 0, 0};
+int16_t noodAvgVals[] = {0, 0, 0, 0};
 uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
 
 #define n00d_1a_Pin D1
@@ -103,11 +102,18 @@ uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
 #define n00d_2a_Pin D0
 #define n00d_2b_Pin D8
 
+static const uint8_t nood1a_chan = 0;
+static const uint8_t nood1b_chan = 1;
+static const uint8_t nood2a_chan = 2;
+static const uint8_t nood2b_chan = 3;
+
+void initNoods();
+void initPixels();
 void updateBodyValues();
 void updateBodyLighting();
 void updateSerialIO();
 void checkIncomingSerial();
-void setn00d(uint8_t pin, uint8_t val);
+void setn00d(uint8_t chan, uint8_t val);
 
 // define methods
 void driveMotors();
@@ -124,26 +130,25 @@ void setup()
   sbus_rx.Begin();
   // sbus_tx.Begin();
 
-  // pinMode(MOUTH_LED_OUT, OUTPUT);
-  // digitalWrite(MOUTH_LED_OUT, LOW);
+  /* not sure if this is necessary...
+  ledcDetachPin(n00d_1a_Pin);
+  ledcDetachPin(n00d_1b_Pin);
+  ledcDetachPin(motor1a_pin);
+  ledcDetachPin(motor1a_pin);
+  ledcDetachPin(motor1b_pin);
+  ledcDetachPin(motor2a_pin);
+  ledcDetachPin(motor2b_pin);
+  //*/
 
-  pinMode(n00d_1a_Pin, OUTPUT);
-  pinMode(n00d_1b_Pin, OUTPUT);
-  pinMode(n00d_2a_Pin, OUTPUT);
-  pinMode(n00d_2b_Pin, OUTPUT);
+  initNoods();
 
-  setn00d(n00d_1a_Pin, 0);
-  setn00d(n00d_1b_Pin, 0);
-  setn00d(n00d_2a_Pin, 0);
-  setn00d(n00d_2b_Pin, 0);
+  motor1.reversed = false;
+  motor2.reversed = true;
 
   // by default, let's have the program assume sbus is lost
   sbusPrevPacketTime = -SBUS_LOST_TIMEOUT;
 
-  analogWriteResolution(8);
-  analogWriteFrequency(2500);
-
-  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  initPixels();
 
   Serial.println("Hello World!");
 }
@@ -229,6 +234,42 @@ void loop()
   delay(1000 / 200);
 }
 
+void initNoods()
+{
+  pinMode(n00d_1a_Pin, OUTPUT);
+  pinMode(n00d_1b_Pin, OUTPUT);
+  pinMode(n00d_2a_Pin, OUTPUT);
+  pinMode(n00d_2b_Pin, OUTPUT);
+
+  // nood 1a
+  ledcSetup(nood1a_chan, freq, resolution);
+  ledcAttachPin(n00d_1a_Pin, nood1a_chan);
+
+  // nood 1b
+  ledcSetup(nood1b_chan, freq, resolution);
+  ledcAttachPin(n00d_1b_Pin, nood1b_chan);
+
+  // nood 2a
+  ledcSetup(nood2a_chan, freq, resolution);
+  ledcAttachPin(n00d_2a_Pin, nood2a_chan);
+
+  // nood 2b
+  ledcSetup(nood2b_chan, freq, resolution);
+  ledcAttachPin(n00d_2b_Pin, nood2b_chan);
+
+  setn00d(nood1a_chan, 0);
+  setn00d(nood1b_chan, 0);
+  setn00d(nood2a_chan, 0);
+  setn00d(nood2b_chan, 0);
+}
+
+void initPixels() {
+  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  delay(10);
+  pixels.clear();
+  pixels.show();
+}
+
 void updateBodyValues()
 {
   // map throttle range to 0-1023
@@ -271,27 +312,23 @@ void updateBodyValues()
     n00d2b = map(constrain(n00d2b, 0, 55), 0, 55, 0, 255);
   }
 
-  n00dsAvg[0] = 0.85 * n00dsAvg[0] + 0.15 * n00d1a;
-  n00dsAvg[1] = 0.85 * n00dsAvg[1] + 0.15 * n00d1b;
-  n00dsAvg[2] = 0.85 * n00dsAvg[2] + 0.15 * n00d2a;
-  n00dsAvg[3] = 0.85 * n00dsAvg[3] + 0.15 * n00d2b;
+  noodVals[0] = n00d1a;
+  noodVals[1] = n00d1b;
+  noodVals[2] = n00d2a;
+  noodVals[3] = n00d2b;    
+
+  noodAvgVals[0] = 0.85 * noodAvgVals[0] + 0.15 * noodVals[0];
+  noodAvgVals[1] = 0.85 * noodAvgVals[1] + 0.15 * noodVals[1];
+  noodAvgVals[2] = 0.85 * noodAvgVals[2] + 0.15 * noodVals[2];
+  noodAvgVals[3] = 0.85 * noodAvgVals[3] + 0.15 * noodVals[3];
 }
 
 void updateBodyLighting()
 {
-  // setn00d(n00d_1a_Pin, n00d1a);
-  // setn00d(n00d_1b_Pin, n00d1b);
-  // setn00d(n00d_2a_Pin, n00d2a);
-  // setn00d(n00d_2b_Pin, n00d2b);
-
-  setn00d(n00d_1a_Pin, n00dsAvg[0]);
-  setn00d(n00d_1b_Pin, n00dsAvg[1]);
-  setn00d(n00d_2a_Pin, n00dsAvg[2]);
-  setn00d(n00d_2b_Pin, n00dsAvg[3]);
-  // setn00d(n00d_1a_pwm_channel, n00dsAvg[0]);
-  // setn00d(n00d_1b_pwm_channel, n00dsAvg[1]);
-  // setn00d(n00d_2a_pwm_channel, n00dsAvg[2]);
-  // setn00d(n00d_2b_pwm_channel, n00dsAvg[3]);
+  setn00d(nood1a_chan, noodAvgVals[0]);
+  setn00d(nood1b_chan, noodAvgVals[1]);
+  setn00d(nood2a_chan, noodAvgVals[2]);
+  setn00d(nood2b_chan, noodAvgVals[3]);
 }
 
 uint8_t channelToPrint = 255;
@@ -402,9 +439,9 @@ void checkIncomingSerial()
   }
 }
 
-void setn00d(uint8_t pin, uint8_t val)
+void setn00d(uint8_t chan, uint8_t val)
 {
-  analogWrite(pin, (255 - val));
+  ledcWrite(chan, (255 - val));
 }
 
 void parseSBUS(bool serialPrint)
@@ -518,28 +555,28 @@ void driveMotors()
   // MOTOR 1
   if (abs(motor1Val) < SBUS_VAL_DEADBAND)
   {
-    motorA.motorStop(); // Soft Stop    -no argument
+    motor1.motorStop(); // Soft Stop    -no argument
   }
   if (motor1Val < -SBUS_VAL_DEADBAND)
   {
-    motorA.motorRev(-motor1Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
+    motor1.motorRev(-motor1Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
   }
   if (motor1Val > SBUS_VAL_DEADBAND)
   {
-    motorA.motorGo(motor1Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
+    motor1.motorGo(motor1Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
   }
 
   // MOTOR 2
   if (abs(motor2Val) < SBUS_VAL_DEADBAND)
   {
-    motorB.motorStop(); // Soft Stop    -no argument
+    motor2.motorStop(); // Soft Stop    -no argument
   }
   if (motor2Val < -SBUS_VAL_DEADBAND)
   {
-    motorB.motorRev(-motor2Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
+    motor2.motorRev(-motor2Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
   }
   if (motor2Val > SBUS_VAL_DEADBAND)
   {
-    motorB.motorGo(motor2Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
+    motor2.motorGo(motor2Val); // Pass the speed to the motor: 0-255 for 8 bit resolution
   }
 }
