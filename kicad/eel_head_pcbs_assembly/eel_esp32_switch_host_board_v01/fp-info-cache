@@ -1,4 +1,4 @@
-20277856507930443
+20289819641433030
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -60276,6 +60276,27 @@ net tie
 0
 4
 4
+Nidec_slide_switch
+CL-SB-2POLE2POS_NDC
+
+CL-SB-22B-11 
+0
+6
+6
+Nidec_slide_switch
+CL-SB-2POLE2POS_NDC-L
+
+CL-SB-22B-11 
+0
+6
+6
+Nidec_slide_switch
+CL-SB-2POLE2POS_NDC-M
+
+CL-SB-22B-11 
+0
+6
+6
 OptoDevice
 ADNS-9800
 Laser Gaming Sensor ADNS-9800
@@ -85834,6 +85855,13 @@ happymodel_ep2_txco_rx
 4
 4
 haribo_kimchi_boards
+smd_solder_pads_1x01_2.54mm
+
+
+0
+1
+1
+haribo_kimchi_boards
 smd_solder_pads_1x02_2.54mm
 
 
@@ -85848,6 +85876,13 @@ smd_solder_pads_1x03_2.54mm
 3
 3
 haribo_kimchi_boards
+smd_solder_pads_1x04
+
+
+0
+4
+4
+haribo_kimchi_boards
 smd_solder_pads_1x05_n00ds_2.54mm
 
 
@@ -85861,6 +85896,20 @@ smd_solder_pads_1x05_n00ds_v2_smaller
 0
 5
 5
+haribo_kimchi_boards
+smd_solder_pads_1x05_n00ds_v3_smaller
+
+
+0
+5
+5
+haribo_kimchi_extra_footprints
+Nidec_2x03_dpdt_CL-SB-22B-11
+
+FMBM5551 
+0
+6
+6
 haribo_kimchi_extra_footprints
 SSOT6_3X1P7_ONS
 
@@ -85936,5 +85985,5 @@ MOUDLE14P-SMD-2.54-21X17.8MM
 
 
 0
-16
-16
+18
+18

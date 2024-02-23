@@ -2,4 +2,5 @@
   (lib (name "xiao esp32c3")(type "KiCad")(uri "/Users/adriaanwormgoor/datkanarie/projects/Theater Utrecht - Jaha Koo Eel/Jaha Koo Eel - git/kicad/libraries/MOUDLE-SEEEDUINO-XIAO-ESP32C3.kicad_sym")(options "")(descr ""))
   (lib (name "haribo_kimchi_boards")(type "KiCad")(uri "/Users/adriaanwormgoor/datkanarie/projects/Theater Utrecht - Jaha Koo Eel/Jaha Koo Eel - git/kicad/libraries/haribo_kimchi_boards.kicad_sym")(options "")(descr ""))
   (lib (name "onsemi_FMBM5551")(type "KiCad")(uri "/Users/adriaanwormgoor/datkanarie/projects/Theater Utrecht - Jaha Koo Eel/Jaha Koo Eel - git/kicad/libraries/onsemi_FMBM5551.kicad_sym")(options "")(descr ""))
+  (lib (name "Nidec_slide_switch")(type "KiCad")(uri "/Users/adriaanwormgoor/datkanarie/projects/Theater Utrecht - Jaha Koo Eel/Jaha Koo Eel - git/kicad/libraries/CL-SB-2P.kicad_sym")(options "")(descr ""))
 )
