@@ -1,14 +1,14 @@
 /**
- * @file main_rc.cpp
+ * @file rc_channels.ino
  * @author Cassandra "ZZ Cat" Robinson (nicad.heli.flier@gmail.com)
- * @brief This file demonstrates the full capabilities of CRSF for Arduino.
- * @version 0.4.0
- * @date 2023-08-08
+ * @brief Example of how to read rc channels from a receiver.
+ * @version 1.0.0
+ * @date 2024-2-23
  *
- * @copyright Copyright (c) 2023, Cassandra "ZZ Cat" Robinson. All rights reserved.
+ * @copyright Copyright (c) 2024, Cassandra "ZZ Cat" Robinson. All rights reserved.
  *
  * @section License GNU General Public License v3.0
- * This main file is a part of the CRSF for Arduino library.
+ * This example is a part of the CRSF for Arduino library.
  * CRSF for Arduino is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,72 +24,115 @@
  * 
  */
 
-/* The Arduino IDE links main_rc.cpp to any sketch that uses the CRSFforArduino library.
- * EG When you open the "RC Channels" example sketch, the Arduino IDE will link main_rc.cpp to it.
- * To work around this, preprocessor directives are used to exclude the main_rc.cpp code from your sketch.
- */
-#if defined(ARDUINO) && defined(PLATFORMIO)
-#include "Arduino.h"
+#include "CRSFforArduino.hpp"
+#define USE_SERIAL_PLOTTER 0
 
-#include "CRSFforArduino.h"
+CRSFforArduino *crsf = nullptr;
 
-#define SERIAL_RX_PIN 39 // Set SERIAL_RX_PIN to the pin that the CRSF receiver's TX pin is connected to.
-#define SERIAL_TX_PIN 37 // Set SERIAL_TX_PIN to the pin that the CRSF receiver's RX pin is connected to.
+int rcChannelCount = crsfProtocol::RC_CHANNEL_COUNT;
+const char *rcChannelNames[] = {
+    "A",
+    "E",
+    "T",
+    "R",
+    "Aux1",
+    "Aux2",
+    "Aux3",
+    "Aux4",
 
-CRSFforArduino crsf = CRSFforArduino(SERIAL_RX_PIN, SERIAL_TX_PIN);
+    "Aux5",
+    "Aux6",
+    "Aux7",
+    "Aux8",
+    "Aux9",
+    "Aux10",
+    "Aux11",
+    "Aux12"};
+
+void onReceiveRcChannels(serialReceiverLayer::rcChannels_t *rcChannels);
 
 void setup()
 {
-    // Initialize the serial port & wait for the port to open.
+    // Initialise the serial port & wait for the port to open.
     Serial.begin(115200);
     while (!Serial)
     {
         ;
     }
 
-    Serial.println("RC Channels Example");
-
-    // Initialize the CRSFforArduino library.
-    if (!crsf.begin())
+    // Initialise CRSF for Arduino.
+    crsf = new CRSFforArduino();
+    if (!crsf->begin())
     {
-        Serial.println("CRSF for Arduino initialization failed!");
+        crsf->end();
+
+        delete crsf;
+        crsf = nullptr;
+
+        Serial.println("CRSF for Arduino initialisation failed!");
         while (1)
         {
-            ;
+            delay(10);
         }
     }
 
+    rcChannelCount = rcChannelCount > crsfProtocol::RC_CHANNEL_COUNT ? crsfProtocol::RC_CHANNEL_COUNT : rcChannelCount;
+
+    crsf->setRcChannelsCallback(onReceiveRcChannels);
+
     // Show the user that the sketch is ready.
+    Serial.println("RC Channels Example");
+    delay(1000);
     Serial.println("Ready");
     delay(1000);
 }
 
 void loop()
 {
-    crsf.update();
+    crsf->update();
+}
 
-    /* Print RC channels every 100 ms. Do this using the millis() function to avoid blocking the main loop. */
-    static unsigned long lastPrint = 0;
-    if (millis() - lastPrint >= 100)
+void onReceiveRcChannels(serialReceiverLayer::rcChannels_t *rcChannels)
+{
+    if (rcChannels->failsafe == false)
     {
-        lastPrint = millis();
-        Serial.print("RC Channels <A: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(1)));
-        Serial.print(", E: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(2)));
-        Serial.print(", T: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(3)));
-        Serial.print(", R: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(4)));
-        Serial.print(", Aux1: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(5)));
-        Serial.print(", Aux2: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(6)));
-        Serial.print(", Aux3: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(7)));
-        Serial.print(", Aux4: ");
-        Serial.print(crsf.rcToUs(crsf.getChannel(8)));
-        Serial.println(">");
+        /* Print RC channels every 100 ms. */
+        unsigned long thisTime = millis();
+        static unsigned long lastTime = millis();
+
+        /* Compensate for millis() overflow. */
+        if (thisTime < lastTime)
+        {
+            lastTime = thisTime;
+        }
+
+        if (thisTime - lastTime >= 100)
+        {
+            lastTime = thisTime;
+#if USE_SERIAL_PLOTTER > 0
+            for (int i = 1; i <= rcChannelCount; i++)
+            {
+                Serial.print(i);
+                Serial.print(":");
+                Serial.print(crsf->rcToUs(crsf->getChannel(i)));
+                Serial.print("\t");
+            }
+            Serial.println();
+#else
+            Serial.print("RC Channels <");
+            for (int i = 1; i <= rcChannelCount; i++)
+            {
+                Serial.print(rcChannelNames[i - 1]);
+                Serial.print(": ");
+                Serial.print(crsf->rcToUs(crsf->getChannel(i)));
+
+                if (i < rcChannelCount)
+                {
+                    Serial.print(", ");
+                }
+            }
+            Serial.println(">");
+#endif
+        }
     }
 }
-#endif // defined(ARDUINO) && defined(PLATFORMIO)
