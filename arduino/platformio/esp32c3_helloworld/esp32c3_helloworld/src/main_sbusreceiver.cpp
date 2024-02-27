@@ -1,6 +1,5 @@
 #include <Arduino.h>
-#include <ESP32MX1508.h>
-#include <Adafruit_BusIO_Register.h>
+#include <Wire.h>
 
 #include "sbus.h"
 #include <HardwareSerial.h>
