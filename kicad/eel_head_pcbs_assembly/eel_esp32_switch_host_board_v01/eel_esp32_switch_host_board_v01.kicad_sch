@@ -1031,7 +1031,6 @@
     )
   )
 
-
   (junction (at 36.83 83.82) (diameter 0) (color 0 0 0 0)
     (uuid 3178aedb-e1d4-44a1-9608-ed865d4dceb0)
   )
@@ -1377,7 +1376,7 @@
     (property "Reference" "R2" (id 0) (at 58.674 116.0779 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Value" "330" (id 1) (at 58.674 118.6179 0)
+    (property "Value" "1k" (id 1) (at 58.674 118.6179 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" (id 2) (at 58.166 117.348 90)
@@ -1857,7 +1856,7 @@
       (reference "R1") (unit 1) (value "330") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
     )
     (path "/56e09bd3-3867-4668-b547-93b60558f9f0"
-      (reference "R2") (unit 1) (value "330") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
+      (reference "R2") (unit 1) (value "1k") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
     )
     (path "/609ab77a-7732-4674-8d1a-d72669237dfa"
       (reference "SW1") (unit 1) (value "SW_Push_DPDT") (footprint "haribo_kimchi_extra_footprints:Nidec_2x03_dpdt_CL-SB-22B-11")
