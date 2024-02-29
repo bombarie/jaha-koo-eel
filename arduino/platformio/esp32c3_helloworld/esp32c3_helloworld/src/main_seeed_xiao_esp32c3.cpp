@@ -142,8 +142,8 @@ void setup()
 
   initNoods();
 
-  motor1.reversed = false;
-  motor2.reversed = true;
+  motor1.reversed = true;
+  motor2.reversed = false;
 
   // by default, let's have the program assume sbus is lost
   sbusPrevPacketTime = -SBUS_LOST_TIMEOUT;
