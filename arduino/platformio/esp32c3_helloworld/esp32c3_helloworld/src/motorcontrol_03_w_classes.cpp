@@ -22,6 +22,8 @@ void setup()
 {
   Serial.begin(115200);
 
+  motor1.reversed = true;
+
   Serial.println("Hello motorcontrol_02_w_ledc!");
 }
 
