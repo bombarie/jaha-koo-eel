@@ -36,6 +36,8 @@ byte bitmash_nood1b = 0;
 byte bitmash_nood2a = 0;
 byte bitmash_nood2b = 0;
 
+bool bSerialPrintValues = false;
+
 #define LED_PIN 10
 #define PWM_OUT_1 20
 #define AUX1_PIN 22
@@ -62,7 +64,7 @@ float deadbandUpperThreshold = 0.915; // everything higher than this percentage 
 
 uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896}; // corresponds to upper bits 100, 101, 110, 111
 
-byte n00dSegmentMaxValue = 55;
+byte n00dSegmentMaxValue = 111; // was 55 (== 63 - 8) -> maybe try 127 - 16? -> update: yes, this works fine!
 
 // methods
 void writeValuesToOutputs();
@@ -102,8 +104,9 @@ void setup()
   // from https://www.pjrc.com/teensy/teensy31.html
   analogWriteResolution(10); // need 10 bits to be able to encode the n00d protocol
 
-  // Serial.println("Press '1', '2', '3', '4' to select the channel to print.");
-  // Serial.println("Press 'a' to print all channels.");
+  Serial.println("Press '1', '2', '3', '4' to select the channel to print.");
+  Serial.println("Press 'a' to print all channels.");
+  Serial.println("Press 's' to toggle printing serial values");
 }
 
 void loop()
@@ -116,12 +119,15 @@ void loop()
   calcNoodOutputValues();
 
   // DEBUG -> hard overwrite -> use to test the reliability of the approach
-  if (channelToPrint != 'a' || channelToPrint != 'x')
+  if (channelToPrint != 255)
   {
     overrideNoodOutputValues();
   }
 
-  // updateSerialPrintValues();
+  if (bSerialPrintValues)
+  {
+    updateSerialPrintValues();
+  }
 
   writeValuesToOutputs();
 
@@ -239,10 +245,10 @@ void checkIncomingSerial()
       channelToPrint = 3;
       break;
     case 'a':
-      channelToPrint = 100;
-      break;
-    case 'x':
       channelToPrint = 255;
+      break;
+    case 's':
+      bSerialPrintValues = !bSerialPrintValues;
       break;
     }
 
