@@ -128,8 +128,6 @@ void EelMotor::_motorGo()
     digitalWrite(_pinIN2, LOW);
 
     ledcAttachPin(_pinIN1, _ledChan);
-    ledcWrite(_pinIN1, _pwmVal);
-
     ledcWrite(_ledChan, _pwmVal);
 }
 
@@ -139,7 +137,5 @@ void EelMotor::_motorRev()
     digitalWrite(_pinIN1, LOW);
 
     ledcAttachPin(_pinIN2, _ledChan);
-    ledcWrite(_pinIN2, _pwmVal);
-
     ledcWrite(_ledChan, _pwmVal);
 }
