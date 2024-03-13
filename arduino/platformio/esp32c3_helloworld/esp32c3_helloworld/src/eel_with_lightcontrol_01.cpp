@@ -91,8 +91,8 @@ uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
 #define n00d_2a_Pin D0
 #define n00d_2b_Pin D8
 
-void updateBodyValues();
-void updateBodyLighting();
+void updateBodyLightValues();
+void setBodyLighting();
 void updateSerialIO();
 void checkIncomingSerial();
 void setn00d(uint8_t pin, uint8_t val);
@@ -100,8 +100,8 @@ void setn00d(uint8_t pin, uint8_t val);
 // define methods
 void parseSBUS(bool serialPrint);
 void updateHeadBodyState();
-void updateHeadLighting();
-void updateBodyLighting();
+void updateHeadLightValues();
+void setBodyLighting();
 
 void setup()
 {
@@ -152,17 +152,17 @@ void loop()
 
   updateHeadBodyState();
 
-  updateBodyValues();
-  updateBodyLighting();
+  updateBodyLightValues();
+  setBodyLighting();
 
-  updateHeadLighting();
-  // updateBodyLighting();
+  updateHeadLightValues();
+  // setBodyLighting();
 
   // delay a little.
   delay(1000 / 200);
 }
 
-void updateBodyValues()
+void updateBodyLightValues()
 {
   // map throttle range to 0-1023
   throttle = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1023);
@@ -210,7 +210,7 @@ void updateBodyValues()
   n00dsAvg[3] = 0.85 * n00dsAvg[3] + 0.15 * n00d2b;
 }
 
-void updateBodyLighting()
+void setBodyLighting()
 {
   // setn00d(n00d_1a_Pin, n00d1a);
   // setn00d(n00d_1b_Pin, n00d1b);
@@ -427,7 +427,7 @@ void updateHeadBodyState()
 
 // led 1 and 3 = eyes
 // led 2 = mouth
-void updateHeadLighting()
+void updateHeadLightValues()
 {
   float audioVal = constrain(map(data.ch[TX_YAW], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 255), 0, 255);
   switch (headState)

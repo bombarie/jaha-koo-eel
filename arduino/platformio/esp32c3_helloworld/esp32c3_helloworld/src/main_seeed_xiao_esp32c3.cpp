@@ -121,22 +121,22 @@ static const uint8_t nood2b_chan = 3;
 
 void initNoods();
 void initPixels();
-void updateBodyValues();
-void updateBodyLighting();
+void updateBodyLightValues();
+void setBodyLights();
 void updateSerialIO();
 void checkIncomingSerial();
 void setn00d(uint8_t chan, uint8_t val);
 
 void resetSbusData();
 void setRGBLights();
-void setLights_disconnected();
+void updateHeadBodyLights_disconnected();
 
 // define methods
 void driveMotors();
 void parseSBUS(bool serialPrint);
 void updateHeadBodyState();
-void updateHeadLighting();
-void updateBodyLighting();
+void updateHeadLightValues();
+void setBodyLights();
 void calcMotorValues();
 
 void setup()
@@ -172,7 +172,7 @@ void loop()
   {
   case DISCONNECTED:
     resetSbusData();
-    setLights_disconnected();
+    updateHeadBodyLights_disconnected();
     break;
   case CONNECTION_ESTABLISHED:
     if (sbusLost)
@@ -200,11 +200,11 @@ void loop()
 
   updateHeadBodyState();
 
-  updateBodyValues();
-  updateBodyLighting();
+  updateBodyLightValues();
+  setBodyLights();
 
-  updateHeadLighting();
-  // updateBodyLighting();
+  updateHeadLightValues();
+  // setBodyLights();
 
   calcMotorValues();
   driveMotors();
@@ -250,7 +250,7 @@ void initPixels()
   pixels.show();
 }
 
-void updateBodyValues()
+void updateBodyLightValues()
 {
   // map throttle range to 0-1023
   throttle = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1023);
@@ -303,7 +303,7 @@ void updateBodyValues()
   noodAvgVals[3] = 0.85 * noodAvgVals[3] + 0.15 * noodVals[3];
 }
 
-void updateBodyLighting()
+void setBodyLights()
 {
   setn00d(nood1a_chan, noodAvgVals[0]);
   setn00d(nood1b_chan, noodAvgVals[1]);
@@ -517,7 +517,7 @@ void updateHeadBodyState()
 
 // led 1 and 3 = eyes
 // led 2 = mouth
-void updateHeadLighting()
+void updateHeadLightValues()
 {
   uint8_t audioVal = constrain(map(data.ch[TX_YAW], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 255), 0, 255);
   switch (headState)
@@ -555,7 +555,7 @@ void setRGBLights()
   // ??
 }
 
-void setLights_disconnected()
+void updateHeadBodyLights_disconnected()
 {
   // ??
 }

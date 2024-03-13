@@ -49,8 +49,8 @@ int16_t n00dsAvg[] = {0, 0, 0, 0};
 uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
 
 void parseSBUS(bool serialPrint);
-void updateBodyValues();
-void updateBodyLighting();
+void updateBodyLightValues();
+void setBodyLighting();
 void updateSerialIO();
 void checkIncomingSerial();
 void setn00d(uint8_t pin, uint8_t val);
@@ -87,15 +87,15 @@ void loop()
   // read SBUS
   parseSBUS(false);
 
-  updateBodyValues();
-  updateBodyLighting();
+  updateBodyLightValues();
+  setBodyLighting();
 
   updateSerialIO();
 
   delay(1000 / 300);
 }
 
-void updateBodyValues()
+void updateBodyLightValues()
 {
   // map throttle range to 0-1023
   throttle = map(data.ch[TX_THROTTLE], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1023);
@@ -143,7 +143,7 @@ void updateBodyValues()
   n00dsAvg[3] = 0.85 * n00dsAvg[3] + 0.15 * n00d2b;
 }
 
-void updateBodyLighting()
+void setBodyLighting()
 {
   // setn00d(n00d_1a_Pin, n00d1a);
   // setn00d(n00d_1b_Pin, n00d1b);
