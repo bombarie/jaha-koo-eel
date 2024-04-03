@@ -5,7 +5,7 @@
 
 > 💡 Print all these files in PETG
 
-| Quantity | Model             | Color       |
+| Quantity | Model             | Color        |
 | -------- | ----------------- | ------------ |
 | 1        | Motor Mount       | Transparent  |
 | 1        | Head Upper        | Transparent  |
@@ -15,6 +15,13 @@
 | 2        | Front Wheel       | Transparent  |
 | 1        | Tail              | Transparent  |
 | 21       | Segment           | Transparent  |
-| 21       | Segment with Loop | Transparent  |
+| 7        | Segment with Loop | Transparent  |
 | 4        | Axle              | Transparent  |
-| 4        | Wheel             | Transparent  |
+| 8        | Wheel             | Transparent  |
+
+## Components
+
+| Quantity | Component               | Comments              |
+| -------- | ----------------------- | --------------------- |
+| 8        | O-ring for wheels       | Transparent silicone  |
+| 2        | O-ring for front wheels | Transparent silicone  |
