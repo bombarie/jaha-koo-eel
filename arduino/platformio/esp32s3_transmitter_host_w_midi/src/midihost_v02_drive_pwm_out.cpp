@@ -15,6 +15,12 @@ void handleControlChange(byte channel, byte data1, byte data2);
 #define rcOutPin1 5
 #define rcOutPin2 4
 
+byte rcOut1Val = 0;
+byte rcOut2Val = 0;
+
+long prevRCWriteTime = 0;
+uint16_t rcWriteInterval = 1000 / 60;
+
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -45,9 +51,18 @@ void setup()
   ledcAttachPin(rcOutPin2, 1);
 }
 
-
 void loop()
 {
+  if (millis() - prevRCWriteTime > rcWriteInterval)
+  {
+    Serial.println("writing pwm values: " + String(rcOut1Val) + ", " + String(rcOut2Val));
+
+    ledcWrite(0, rcOut1Val);
+    ledcWrite(1, rcOut2Val);
+
+    prevRCWriteTime = millis();
+  }
+
   // read any new MIDI messages
   // DO NOT INTRODUCE A DELAY -> the usbMIDI.read() needs to be called rapidly from loop()
   MIDI.read();
@@ -60,17 +75,17 @@ void handleControlChange(byte channel, byte data1, byte data2)
   // CC0
   if (channel == 1 && data1 == 0)
   {
-      // rcChannels[AILERON] = map(data2, 0, 127, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
-      ledcWrite(rcOutPin1, data2 * 2);
-      Serial.println("Receive CC >>  writing to pin: " + String(rcOutPin1) + ", value: " + String(data2 * 2));
+    // rcChannels[AILERON] = map(data2, 0, 127, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+    rcOut1Val = data2 * 2;
+    // Serial.println("Receive CC0 >> value: " + String(rcOut1Val));
   }
 
   // CC1
   if (channel == 1 && data1 == 1)
   {
-      // rcChannels[ELEVATOR] = map(data2, 0, 127, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
-      ledcWrite(rcOutPin2, data2 * 2);
-      Serial.println("Receive CC >>  writing to pin: " + String(rcOutPin2) + ", value: " + String(data2 * 2));
+    // rcChannels[ELEVATOR] = map(data2, 0, 127, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+    rcOut2Val = data2 * 2;
+    // Serial.println("Receive CC1 >> value: " + String(rcOut2Val));
   }
 
   /*
