@@ -22,6 +22,10 @@
 		{
 			"name": "WEMOS_ESP32S2_MIDI_ELRSTX",
 			"path": "WEMOS_ESP32S2_MIDI_ELRSTX"
+		},
+		{
+			"name": "esp32s3_transmitter_host_w_midi",
+			"path": "esp32s3_transmitter_host_w_midi"
 		}
 	],
 	"settings": {
