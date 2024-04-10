@@ -36,7 +36,7 @@ void setup()
 void loop()
 {
   // read SBUS
-  parseSBUS(false);
+  parseSBUS(true);
 
   updateSerialIO();
 
