@@ -2,19 +2,34 @@
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 
-// define the methods used in this sketch (prevents compile errors)
-void processMIDI(void);
-void printBytes(const byte *data, unsigned int size);
-// uint16_t processDeadband(uint16_t val, uint16_t range);
-uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range);
-uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range);
-void checkIncomingSerial();
+/*
+
+FYI: Serial Monitor commands:
+1 -> outputting only nood1a
+2 -> outputting only nood1b
+3 -> outputting only nood2a
+4 -> outputting only nood2b
+a -> outputting all noods (DEFAULT)
+q -> outputting noodOutVal1
+s -> toggle serial print values
+
+*/
 
 enum DEADBAND_INPUT_RANGE
 {
   _256 = 127,
   _1024 = 1023
 };
+
+struct DeadbandMinMax {
+  uint16_t min;
+  uint16_t max;
+};
+
+// I manually explored when the values at the receiver start moving. The values are capped off at the lower and upper end of the range.
+// So, for both a 256 and 1024 range, I found the values where the receiver starts to move and where it stops moving.
+DeadbandMinMax deadbandMinMax256 = {10, 117};
+DeadbandMinMax deadbandMinMax1024 = {126, 940}; // FYI: for eel #1, a solid range was {130, 936}
 
 byte ledPWMVal = 0;
 byte audioVal = 0;
@@ -46,6 +61,7 @@ bool bSerialPrintValues = false;
 
 byte channelToPrint = 255;
 
+
 unsigned long prevSerialPrintMills;
 unsigned long serialPrintInterval = 200;
 
@@ -56,15 +72,12 @@ byte bitmashSendChannel = 0;
 uint16_t bitmashed_out = 0;
 uint16_t bitmashed_outs[] = {0, 0, 0, 0};
 
-// FYI -> I manually explored when the values at the receiver start moving.
-// 'deadbandLowerThreshold' is the percentage at the bottom of the range where the values start to move.
-// 'deadbandUpperThreshold' is the percentage at the top of the range where the values start to move.
-float deadbandLowerThreshold = 0.125; // everything lower than this percentage is capped off on the receiving end
-float deadbandUpperThreshold = 0.915; // everything higher than this percentage is capped off on the receiving end
+// this is the value amount that we subtract from 127, to allow some deadband between the nood values.
+// Effectively, determines the resolution of the noods. 0 is no deadband, 127 is max deadband.
+#define NOOD_VALUES_TRANSMISSION_BANDWIDTH 16
 
 uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896}; // corresponds to upper bits 100, 101, 110, 111
-
-byte n00dSegmentMaxValue = 111; // was 55 (== 63 - 8) -> maybe try 127 - 16? -> update: yes, this works fine!
+byte n00dSegmentMaxValue = (127 - NOOD_VALUES_TRANSMISSION_BANDWIDTH); // was 55 (== 63 - 8) -> maybe try 127 - 16? -> update: yes, this works fine!
 
 // methods
 void writeValuesToOutputs();
@@ -75,6 +88,11 @@ void calcNoodOutputValues();
 void checkIncomingSerial();
 void updateSerialPrintValues();
 void serialPrintDebugValues();
+void processMIDI(void);
+void printBytes(const byte *data, unsigned int size);
+uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range);
+uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range);
+
 
 void BlinkLed(byte num) // Basic blink function
 {
@@ -233,18 +251,23 @@ void checkIncomingSerial()
     switch (inChar)
     {
     case '1':
+      Serial.println("Outputting only nood1a");
       channelToPrint = 0;
       break;
     case '2':
+      Serial.println("Outputting only nood1b");
       channelToPrint = 1;
       break;
     case '3':
+      Serial.println("Outputting only nood2a");
       channelToPrint = 2;
       break;
     case '4':
+      Serial.println("Outputting only nood2b");
       channelToPrint = 3;
       break;
     case 'a':
+      Serial.println("Outputting only nood1a");
       channelToPrint = 255;
       break;
     case 's':
@@ -540,7 +563,7 @@ uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range)
   switch (range)
   {
   case DEADBAND_INPUT_RANGE::_256:
-    return constrain(map(val, 0, 127, 10, 117), 0, 127);
+    return constrain(map(val, 0, 127, deadbandMinMax256.min, deadbandMinMax256.max), 0, 127);
     break;
   }
 }
@@ -551,7 +574,7 @@ uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range)
   {
   case DEADBAND_INPUT_RANGE::_1024:
     // return constrain(map(val, 0, 1023, 127, 936), 0, 1023);
-    return constrain(map(val, 0, 1023, 130, 936), 0, 1023);
+    return constrain(map(val, 0, 1023, deadbandMinMax1024.min, deadbandMinMax1024.max), 0, 1023);
     break;
   }
 }
