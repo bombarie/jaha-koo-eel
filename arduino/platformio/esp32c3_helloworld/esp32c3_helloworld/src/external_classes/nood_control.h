@@ -2,6 +2,11 @@ int16_t noodVals[] = {0, 0, 0, 0};
 int16_t noodAvgVals[] = {0, 0, 0, 0};
 uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};
 
+// this is the value amount that we subtract from 127, to allow some deadband between the nood values.
+// Effectively, determines the resolution of the noods. 0 is no deadband, 127 is max deadband.
+#define NOOD_VALUES_TRANSMISSION_BANDWIDTH 24
+#define NOOD_VALUES_BANDWIDTH (127 - NOOD_VALUES_TRANSMISSION_BANDWIDTH)
+
 #define n00d_1a_Pin D8
 #define n00d_1b_Pin D1
 #define n00d_2a_Pin D10
@@ -60,7 +65,7 @@ void updateBodyLightValues()
     // throttleAdjusted = throttle - (throttle >> 5);
     throttleAdjusted = throttle - 9;
     n00d1a = (throttle & 0x7F) - 9;
-    n00d1a = map(constrain(n00d1a, 0, 111), 0, 111, 0, 255);
+    n00d1a = map(constrain(n00d1a, 0, NOOD_VALUES_BANDWIDTH), 0, NOOD_VALUES_BANDWIDTH, 0, 255);
   }
   // if (throttle & (0x1 << 8)) // 256
   // if (throttle & n00dSegmentIdentifiers[1] == n00dSegmentIdentifiers[1]) // 640
@@ -69,7 +74,7 @@ void updateBodyLightValues()
     // throttle -= throttle - (throttle >> 5);
     throttleAdjusted = throttle - 10;
     n00d1b = (throttle & 0x7F) - 10;
-    n00d1b = map(constrain(n00d1b, 0, 111), 0, 111, 0, 255);
+    n00d1b = map(constrain(n00d1b, 0, NOOD_VALUES_BANDWIDTH), 0, NOOD_VALUES_BANDWIDTH, 0, 255);
   }
   // if (throttle & (0x1 << 7)) // 128
   // if (throttle & n00dSegmentIdentifiers[2] == n00dSegmentIdentifiers[2]) // 768
@@ -77,7 +82,7 @@ void updateBodyLightValues()
   {
     throttleAdjusted = throttle - 9;
     n00d2a = (throttle & 0x7F) - 9;
-    n00d2a = map(constrain(n00d2a, 0, 111), 0, 111, 0, 255);
+    n00d2a = map(constrain(n00d2a, 0, NOOD_VALUES_BANDWIDTH), 0, NOOD_VALUES_BANDWIDTH, 0, 255);
   }
   // if (throttle & (0x1 << 6)) // 64
   // if (throttle & n00dSegmentIdentifiers[3] == n00dSegmentIdentifiers[3]) // 896
@@ -85,7 +90,7 @@ void updateBodyLightValues()
   {
     throttleAdjusted = throttle - 9;
     n00d2b = (throttle & 0x7F) - 9;
-    n00d2b = map(constrain(n00d2b, 0, 111), 0, 111, 0, 255);
+    n00d2b = map(constrain(n00d2b, 0, NOOD_VALUES_BANDWIDTH), 0, NOOD_VALUES_BANDWIDTH, 0, 255);
   }
 
   noodVals[0] = n00d1a;

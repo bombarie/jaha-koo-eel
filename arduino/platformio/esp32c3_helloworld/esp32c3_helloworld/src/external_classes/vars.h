@@ -2,11 +2,14 @@
 const uint32_t freq = 2500;
 const uint8_t resolution = 8;
 
+bool printSbusData = false;
+
 enum HEAD_STATE
 {
   STATE_1,
   STATE_2,
-  STATE_3
+  STATE_3,
+  STATE_4
 };
 HEAD_STATE headState = STATE_1;
 

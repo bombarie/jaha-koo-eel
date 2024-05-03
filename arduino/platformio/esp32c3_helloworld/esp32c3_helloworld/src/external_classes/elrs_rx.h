@@ -9,14 +9,14 @@ bfs::SbusRx sbus_rx(&MySerial0, D7, D6, true, false);
 /* SBUS data */
 bfs::SbusData data;
 
-#define SBUS_PACKET_PRINT_INTERVAL 100 // ms
+#define SBUS_PACKET_PRINT_INTERVAL 20 // ms (originally 100ms)
 u_long sbusPacketPrintPrevTime = 0;
 
 u_long sbusPrevPacketTime;
 bool sbusLost = false;
 
-#define SBUS_VAL_MIN 191
-#define SBUS_VAL_MAX 1793
+#define SBUS_VAL_MIN 176 // 191
+#define SBUS_VAL_MAX 1808 // 1793
 #define SBUS_VAL_CENTER 992
 #define SBUS_VAL_DEADBAND 6
 #define SBUS_LOST_TIMEOUT 100
@@ -40,6 +40,10 @@ void parseSBUS(bool serialPrint);
 
 void initELRSRX() {
   /* Begin the SBUS communication */
+  
+  // TODO -> define the RX as input_pullup, so that we might prevent / circumvent the bootloader mode error?
+  pinMode(D7, INPUT_PULLUP); // pull up the RX pin
+
   sbus_rx.Begin();
   // sbus_tx.Begin();
 

@@ -36,7 +36,7 @@ void setup()
 void loop()
 {
   // read SBUS
-  parseSBUS(true);
+  parseSBUS(printSbusData);
 
   updateSerialIO();
 
@@ -91,6 +91,12 @@ void updateHeadBodyState()
   else
   {
     headState = STATE_3;
+  }
+
+  // override head state if aux1 is low
+  if (data.ch[TX_AUX1] > SBUS_SWITCH_MIN_THRESHOLD)
+  {
+    headState = STATE_4;
   }
 }
 
