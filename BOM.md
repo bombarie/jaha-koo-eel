@@ -15,8 +15,8 @@
 | 2        | Mouth Light Guide | Black        |
 | 2        | Front Wheel       | Transparent  |
 | 1        | Tail              | Transparent  |
-| 20       | Segment           | Transparent  |
-| 7        | Segment with n00d | Transparent  |
+| 19       | Segment           | Transparent  |
+| 8        | Segment with n00d | Transparent  |
 | 1        | Segment battery   | Transparent  |
 | 4        | Axle              | Transparent  |
 | 8        | Wheel             | Transparent  |
