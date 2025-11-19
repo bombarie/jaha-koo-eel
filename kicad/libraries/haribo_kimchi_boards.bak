@@ -456,7 +456,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(property "Reference" "U"
-			(at -1.016 17.018 0)
+			(at -1.016 11.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -471,8 +471,8 @@
 				)
 			)
 		)
-		(property "Footprint" "haribo_kimchi_boards:Dynamixel_driver_board"
-			(at -2.794 14.224 0)
+		(property "Footprint" ""
+			(at -8.89 10.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -480,8 +480,8 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://github.com/JosueAGtz/dynamixelInterface"
-			(at -2.032 11.938 0)
+		(property "Datasheet" ""
+			(at -8.89 10.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
