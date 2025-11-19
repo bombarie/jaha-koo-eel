@@ -1,6 +1,6 @@
 # Quick Links
 
-> 💡 Note the `[libraries](./libraries/)` folder, containing some custom-developed _footprints_ and _symbols_ which are used in various Kicad projects in this repository 
+> 💡 Note the **[libraries](./libraries/)** folder, containing some custom-developed _footprints_ and _symbols_ which are used in various Kicad projects in this repository 
 
 ### PCB inside the Eel
 
