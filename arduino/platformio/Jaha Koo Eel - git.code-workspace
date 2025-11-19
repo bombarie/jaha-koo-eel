@@ -1,6 +1,7 @@
 {
 	"folders": [
 		{
+			"name": "Jaha Koo Eel - git",
 			"path": "../.."
 		},
 		{
@@ -18,14 +19,6 @@
 		{
 			"name": "motors_testing_esp32s2",
 			"path": "motors_testing_esp32s2"
-		},
-		{
-			"name": "WEMOS_ESP32S2_MIDI_ELRSTX",
-			"path": "WEMOS_ESP32S2_MIDI_ELRSTX"
-		},
-		{
-			"name": "esp32s3_transmitter_host_w_midi",
-			"path": "esp32s3_transmitter_host_w_midi"
 		}
 	],
 	"settings": {
