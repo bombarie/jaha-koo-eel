@@ -1,4 +1,4 @@
-# Quick Links
+# PCB Design - quick Links
 
 > 💡 Note the **[libraries](./libraries/)** folder, containing some custom-developed _footprints_ and _symbols_ which are used in various Kicad projects in this repository 
 

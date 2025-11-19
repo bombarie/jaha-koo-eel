@@ -8,4 +8,6 @@ A collaboration between [Adriaan Wormgoor](http://adriaanwormgoor.nl) and [Wille
 
 
 ## Build your own
-[Bill of Materials](./BOM.md)
+* [Bill of Materials](./BOM.md)
+* [Code](./arduino/README.md)
+* [PCB designs](./kicad/README.md)
