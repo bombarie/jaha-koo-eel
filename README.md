@@ -6,8 +6,14 @@ A collaboration between [Adriaan Wormgoor](http://adriaanwormgoor.nl) and [Wille
 
 ![haribo](./assets/DSC02752_1600px.jpeg)
 
+## Manual
+* [Operator Manual](doc/Haribo%20Kimchi%20Eel%20-%20operator%20manual.pdf)
 
 ## Build your own
 * [Bill of Materials](./BOM.md)
+* [Schematics](doc/Haribo%20Kimchi%20Eel%20-%20tech%20stuff%20-%20visual%20schematic%20and%20pinout.pdf)
 * [Code](./arduino/README.md)
 * [PCB designs](./kicad/README.md)
+* [PCB designs](./kicad/README.md)
+* [PCB designs](./kicad/README.md)
+
