@@ -14,6 +14,3 @@ A collaboration between [Adriaan Wormgoor](http://adriaanwormgoor.nl) and [Wille
 * [Schematics](doc/Haribo%20Kimchi%20Eel%20-%20tech%20stuff%20-%20visual%20schematic%20and%20pinout.pdf)
 * [Code](./arduino/README.md)
 * [PCB designs](./kicad/README.md)
-* [PCB designs](./kicad/README.md)
-* [PCB designs](./kicad/README.md)
-
