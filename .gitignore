@@ -5,3 +5,5 @@
 **/xiao_esp32c3_schematic-backups/*
 **/XIAO ESP32C3-backups/*
 kicad/**/*-backups/*
+
+build/**
