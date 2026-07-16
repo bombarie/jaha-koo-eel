@@ -1,0 +1,7 @@
+"Reference","Qty","Value","DNP","Exclude from BOM","Exclude from Board","Footprint","Datasheet"
+"A2","1","Adafruit_Feather_Generic","","","","Module:Adafruit_Feather","https://cdn-learn.adafruit.com/downloads/pdf/adafruit-feather.pdf"
+"C2,C3,C4","3","1uf","","","","Capacitor_SMD:C_0603_1608Metric","~"
+"D1","1","LED","","","","LED_SMD:LED_1206_3216Metric","~"
+"J1,J2,J3,J4,J5","5","Conn_01x03_Female","","","","Connector_JST:JST_SH_BM03B-SRSS-TB_1x03-1MP_P1.00mm_Vertical","~"
+"R2,R3,R4","3","10k","","","","Resistor_SMD:R_0603_1608Metric","~"
+"R5","1","330","","","","Resistor_SMD:R_1206_3216Metric","~"

@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name "teensy_library-master")(type "KiCad")(uri "/Users/adriaanwormgoor/Development/Electronics/KiCad libraries/teensy_library-master")(options "")(descr ""))
+)

@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<export version="E">
+  <design>
+    <source>/Users/adriaanwormgoor/datkanarie/projects/Theater Utrecht - Jaha Koo Eel/Jaha Koo Eel - git/kicad/Teensy_32_tx_breakout_board/Teensy_32_tx_breakout_board.kicad_sch</source>
+    <date>2024 January 09, Tuesday 16:21:45</date>
+    <tool>Eeschema (6.0.5-0)</tool>
+    <sheet number="1" name="/" tstamps="/">
+      <title_block>
+        <title/>
+        <company/>
+        <rev/>
+        <date/>
+        <source>Teensy_32_tx_breakout_board.kicad_sch</source>
+        <comment number="1" value=""/>
+        <comment number="2" value=""/>
+        <comment number="3" value=""/>
+        <comment number="4" value=""/>
+        <comment number="5" value=""/>
+        <comment number="6" value=""/>
+        <comment number="7" value=""/>
+        <comment number="8" value=""/>
+        <comment number="9" value=""/>
+      </title_block>
+    </sheet>
+  </design>
+  <components>
+    <comp ref="C1">
+      <value>1uf</value>
+      <footprint>Capacitor_SMD:C_0603_1608Metric</footprint>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>28690712-6c31-428a-b3e6-21851a7120c2</tstamps>
+    </comp>
+    <comp ref="C2">
+      <value>1uf</value>
+      <footprint>Capacitor_SMD:C_0603_1608Metric</footprint>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>41893df5-d1e3-48c0-ac03-83ec5675a335</tstamps>
+    </comp>
+    <comp ref="C3">
+      <value>1uf</value>
+      <footprint>Capacitor_SMD:C_0603_1608Metric</footprint>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>f6e19086-e635-4b88-91e7-33cd7f68c18e</tstamps>
+    </comp>
+    <comp ref="J1">
+      <value>Conn_01x03_Female</value>
+      <footprint>Connector_JST:JST_SH_BM03B-SRSS-TB_1x03-1MP_P1.00mm_Vertical</footprint>
+      <libsource lib="Connector" part="Conn_01x03_Female" description="Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>bf4e8d6c-d6b2-4d3a-98e4-5a4d57d084db</tstamps>
+    </comp>
+    <comp ref="J2">
+      <value>Conn_01x03_Female</value>
+      <footprint>Connector_JST:JST_SH_BM03B-SRSS-TB_1x03-1MP_P1.00mm_Vertical</footprint>
+      <libsource lib="Connector" part="Conn_01x03_Female" description="Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>9afcefb5-cd9e-407f-b7d1-7046a9797c54</tstamps>
+    </comp>
+    <comp ref="J3">
+      <value>Conn_01x03_Female</value>
+      <footprint>Connector_JST:JST_SH_BM03B-SRSS-TB_1x03-1MP_P1.00mm_Vertical</footprint>
+      <libsource lib="Connector" part="Conn_01x03_Female" description="Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>4b432a41-9971-41e8-8f16-40e91a44f9ee</tstamps>
+    </comp>
+    <comp ref="J4">
+      <value>Conn_01x03_Female</value>
+      <footprint>Connector_JST:JST_SH_BM03B-SRSS-TB_1x03-1MP_P1.00mm_Vertical</footprint>
+      <libsource lib="Connector" part="Conn_01x03_Female" description="Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>8d5237dc-788f-4c7f-8180-1f20d482b726</tstamps>
+    </comp>
+    <comp ref="R1">
+      <value>10k</value>
+      <footprint>Resistor_SMD:R_0603_1608Metric</footprint>
+      <libsource lib="Device" part="R" description="Resistor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>f19c8d0d-1b6e-439e-99a4-e431246327ce</tstamps>
+    </comp>
+    <comp ref="R2">
+      <value>10k</value>
+      <footprint>Resistor_SMD:R_0603_1608Metric</footprint>
+      <libsource lib="Device" part="R" description="Resistor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>09536005-05bb-4928-89fd-b025326c854c</tstamps>
+    </comp>
+    <comp ref="R3">
+      <value>10k</value>
+      <footprint>Resistor_SMD:R_0603_1608Metric</footprint>
+      <libsource lib="Device" part="R" description="Resistor"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>1138ce03-7a02-47ce-931c-ea5bc9bb576d</tstamps>
+    </comp>
+    <comp ref="U1">
+      <value>Teensy3.2_backpack</value>
+      <footprint>teensy_library-master:Teensy30_31_32_outside_pins</footprint>
+      <libsource lib="custom_symbol_lib" part="Teensy3.2_backpack" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="Teensy_32_tx_breakout_board.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>0ca26274-0c31-43db-9478-79da408838ca</tstamps>
+    </comp>
+  </components>
+  <libparts>
+    <libpart lib="Connector" part="Conn_01x03_Female">
+      <description>Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>Connector*:*_1x??_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">J</field>
+        <field name="Value">Conn_01x03_Female</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="Pin_1" type="passive"/>
+        <pin num="2" name="Pin_2" type="passive"/>
+        <pin num="3" name="Pin_3" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="C">
+      <description>Unpolarized capacitor</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>C_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">C</field>
+        <field name="Value">C</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="passive"/>
+        <pin num="2" name="" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="R">
+      <description>Resistor</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>R_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">R</field>
+        <field name="Value">R</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="passive"/>
+        <pin num="2" name="" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="custom_symbol_lib" part="Teensy3.2_backpack">
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">Teensy3.2_backpack</field>
+        <field name="Footprint">teensy_library-master:Teensy30_31_32_outside_pins</field>
+      </fields>
+      <pins>
+        <pin num="1" name="GND" type="power_in"/>
+        <pin num="2" name="0_RX1_Touch" type="bidirectional"/>
+        <pin num="3" name="1_TX1_Touch" type="bidirectional"/>
+        <pin num="4" name="2" type="bidirectional"/>
+        <pin num="5" name="3_TX_PWM" type="bidirectional"/>
+        <pin num="6" name="4_RX_PWM" type="bidirectional"/>
+        <pin num="7" name="5_TX1_PWM" type="bidirectional"/>
+        <pin num="8" name="6_PWM" type="bidirectional"/>
+        <pin num="9" name="7_RX3_DOUT" type="bidirectional"/>
+        <pin num="10" name="8_TX3_DIN" type="bidirectional"/>
+        <pin num="11" name="9_RX2_CS_PWM" type="bidirectional"/>
+        <pin num="12" name="10_TX2_CS_PWM" type="bidirectional"/>
+        <pin num="13" name="11_DOUT" type="bidirectional"/>
+        <pin num="14" name="12_DIN" type="bidirectional"/>
+        <pin num="15" name="VBat" type="power_in"/>
+        <pin num="16" name="3.3V" type="power_out"/>
+        <pin num="17" name="GND" type="power_in"/>
+        <pin num="18" name="Program" type="input"/>
+        <pin num="19" name="A14/DAC" type="bidirectional"/>
+        <pin num="20" name="13_LED_SCK" type="bidirectional"/>
+        <pin num="21" name="14_A0_SCK" type="bidirectional"/>
+        <pin num="22" name="15_A1_CS_Touch" type="bidirectional"/>
+        <pin num="23" name="16_A2_SCL0_Touch" type="bidirectional"/>
+        <pin num="24" name="17_A3_SDA0_Touch" type="bidirectional"/>
+        <pin num="25" name="18_A4_SDA0_Touch" type="bidirectional"/>
+        <pin num="26" name="19_A5_SCL0_Touch" type="bidirectional"/>
+        <pin num="27" name="20_A6_CS_PWM" type="bidirectional"/>
+        <pin num="28" name="21_A7_RX1_CS_PWM" type="bidirectional"/>
+        <pin num="29" name="22_A8_Touch_PWM" type="bidirectional"/>
+        <pin num="30" name="23_A9_Touch_PWM" type="bidirectional"/>
+        <pin num="31" name="3.3V" type="power_out"/>
+        <pin num="32" name="AGND" type="power_out"/>
+        <pin num="33" name="Vin" type="power_in"/>
+        <pin num="34" name="VUSB" type="power_in"/>
+      </pins>
+    </libpart>
+  </libparts>
+  <libraries>
+    <library logical="Connector">
+      <uri>/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols//Connector.kicad_sym</uri>
+    </library>
+    <library logical="Device">
+      <uri>/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols//Device.kicad_sym</uri>
+    </library>
+    <library logical="custom_symbol_lib">
+      <uri>/Users/adriaanwormgoor/datkanarie/projects/Theater Utrecht - Jaha Koo Eel/Jaha Koo Eel - git/kicad/libraries/custom_symbol_lib.kicad_sym</uri>
+    </library>
+  </libraries>
+  <nets>
+    <net code="1" name="20_PWM">
+      <node ref="R1" pin="1" pintype="passive"/>
+      <node ref="U1" pin="27" pinfunction="20_A6_CS_PWM" pintype="bidirectional"/>
+    </net>
+    <net code="2" name="21_PWM">
+      <node ref="R2" pin="1" pintype="passive"/>
+      <node ref="U1" pin="28" pinfunction="21_A7_RX1_CS_PWM" pintype="bidirectional"/>
+    </net>
+    <net code="3" name="22_PWM">
+      <node ref="R3" pin="1" pintype="passive"/>
+      <node ref="U1" pin="29" pinfunction="22_A8_Touch_PWM" pintype="bidirectional"/>
+    </net>
+    <net code="4" name="A14_DAC">
+      <node ref="J1" pin="2" pinfunction="Pin_2" pintype="passive"/>
+      <node ref="U1" pin="19" pinfunction="A14/DAC" pintype="bidirectional"/>
+    </net>
+    <net code="5" name="GND">
+      <node ref="C1" pin="2" pintype="passive"/>
+      <node ref="C2" pin="2" pintype="passive"/>
+      <node ref="C3" pin="2" pintype="passive"/>
+      <node ref="J1" pin="3" pinfunction="Pin_3" pintype="passive"/>
+      <node ref="J2" pin="3" pinfunction="Pin_3" pintype="passive"/>
+      <node ref="J3" pin="3" pinfunction="Pin_3" pintype="passive"/>
+      <node ref="J4" pin="3" pinfunction="Pin_3" pintype="passive"/>
+      <node ref="U1" pin="1" pinfunction="GND" pintype="power_in"/>
+    </net>
+    <net code="6" name="Net-(C1-Pad1)">
+      <node ref="C1" pin="1" pintype="passive"/>
+      <node ref="J2" pin="2" pinfunction="Pin_2" pintype="passive"/>
+      <node ref="R1" pin="2" pintype="passive"/>
+    </net>
+    <net code="7" name="Net-(C2-Pad1)">
+      <node ref="C2" pin="1" pintype="passive"/>
+      <node ref="J3" pin="2" pinfunction="Pin_2" pintype="passive"/>
+      <node ref="R2" pin="2" pintype="passive"/>
+    </net>
+    <net code="8" name="Net-(C3-Pad1)">
+      <node ref="C3" pin="1" pintype="passive"/>
+      <node ref="J4" pin="2" pinfunction="Pin_2" pintype="passive"/>
+      <node ref="R3" pin="2" pintype="passive"/>
+    </net>
+    <net code="9" name="unconnected-(J1-Pad1)">
+      <node ref="J1" pin="1" pinfunction="Pin_1" pintype="passive+no_connect"/>
+    </net>
+    <net code="10" name="unconnected-(J2-Pad1)">
+      <node ref="J2" pin="1" pinfunction="Pin_1" pintype="passive+no_connect"/>
+    </net>
+    <net code="11" name="unconnected-(J3-Pad1)">
+      <node ref="J3" pin="1" pinfunction="Pin_1" pintype="passive+no_connect"/>
+    </net>
+    <net code="12" name="unconnected-(J4-Pad1)">
+      <node ref="J4" pin="1" pinfunction="Pin_1" pintype="passive+no_connect"/>
+    </net>
+    <net code="13" name="unconnected-(U1-Pad2)">
+      <node ref="U1" pin="2" pinfunction="0_RX1_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="14" name="unconnected-(U1-Pad3)">
+      <node ref="U1" pin="3" pinfunction="1_TX1_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="15" name="unconnected-(U1-Pad4)">
+      <node ref="U1" pin="4" pinfunction="2" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="16" name="unconnected-(U1-Pad5)">
+      <node ref="U1" pin="5" pinfunction="3_TX_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="17" name="unconnected-(U1-Pad6)">
+      <node ref="U1" pin="6" pinfunction="4_RX_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="18" name="unconnected-(U1-Pad7)">
+      <node ref="U1" pin="7" pinfunction="5_TX1_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="19" name="unconnected-(U1-Pad8)">
+      <node ref="U1" pin="8" pinfunction="6_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="20" name="unconnected-(U1-Pad9)">
+      <node ref="U1" pin="9" pinfunction="7_RX3_DOUT" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="21" name="unconnected-(U1-Pad10)">
+      <node ref="U1" pin="10" pinfunction="8_TX3_DIN" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="22" name="unconnected-(U1-Pad11)">
+      <node ref="U1" pin="11" pinfunction="9_RX2_CS_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="23" name="unconnected-(U1-Pad12)">
+      <node ref="U1" pin="12" pinfunction="10_TX2_CS_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="24" name="unconnected-(U1-Pad13)">
+      <node ref="U1" pin="13" pinfunction="11_DOUT" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="25" name="unconnected-(U1-Pad14)">
+      <node ref="U1" pin="14" pinfunction="12_DIN" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="26" name="unconnected-(U1-Pad15)">
+      <node ref="U1" pin="15" pinfunction="VBat" pintype="power_in+no_connect"/>
+    </net>
+    <net code="27" name="unconnected-(U1-Pad16)">
+      <node ref="U1" pin="16" pinfunction="3.3V" pintype="power_out+no_connect"/>
+    </net>
+    <net code="28" name="unconnected-(U1-Pad17)">
+      <node ref="U1" pin="17" pinfunction="GND" pintype="power_in+no_connect"/>
+    </net>
+    <net code="29" name="unconnected-(U1-Pad18)">
+      <node ref="U1" pin="18" pinfunction="Program" pintype="input+no_connect"/>
+    </net>
+    <net code="30" name="unconnected-(U1-Pad20)">
+      <node ref="U1" pin="20" pinfunction="13_LED_SCK" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="31" name="unconnected-(U1-Pad21)">
+      <node ref="U1" pin="21" pinfunction="14_A0_SCK" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="32" name="unconnected-(U1-Pad22)">
+      <node ref="U1" pin="22" pinfunction="15_A1_CS_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="33" name="unconnected-(U1-Pad23)">
+      <node ref="U1" pin="23" pinfunction="16_A2_SCL0_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="34" name="unconnected-(U1-Pad24)">
+      <node ref="U1" pin="24" pinfunction="17_A3_SDA0_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="35" name="unconnected-(U1-Pad25)">
+      <node ref="U1" pin="25" pinfunction="18_A4_SDA0_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="36" name="unconnected-(U1-Pad26)">
+      <node ref="U1" pin="26" pinfunction="19_A5_SCL0_Touch" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="37" name="unconnected-(U1-Pad30)">
+      <node ref="U1" pin="30" pinfunction="23_A9_Touch_PWM" pintype="bidirectional+no_connect"/>
+    </net>
+    <net code="38" name="unconnected-(U1-Pad31)">
+      <node ref="U1" pin="31" pinfunction="3.3V" pintype="power_out+no_connect"/>
+    </net>
+    <net code="39" name="unconnected-(U1-Pad32)">
+      <node ref="U1" pin="32" pinfunction="AGND" pintype="power_out+no_connect"/>
+    </net>
+    <net code="40" name="unconnected-(U1-Pad33)">
+      <node ref="U1" pin="33" pinfunction="Vin" pintype="power_in+no_connect"/>
+    </net>
+    <net code="41" name="unconnected-(U1-Pad34)">
+      <node ref="U1" pin="34" pinfunction="VUSB" pintype="power_in+no_connect"/>
+    </net>
+  </nets>
+</export>
