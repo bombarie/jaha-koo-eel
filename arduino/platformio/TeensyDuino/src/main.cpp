@@ -10,7 +10,7 @@ FYI: Serial Monitor commands:
 3 -> outputting only nood2a
 4 -> outputting only nood2b
 a -> outputting all noods (DEFAULT)
-q -> outputting noodOutVal1
+// q -> outputting noodOutVal1
 s -> toggle serial print values
 
 */
