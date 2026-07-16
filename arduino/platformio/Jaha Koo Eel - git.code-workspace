@@ -19,6 +19,10 @@
 		{
 			"name": "motors_testing_esp32s2",
 			"path": "motors_testing_esp32s2"
+		},
+		{
+			"name": "Eel Remote samd51",
+			"path": "Eel Remote samd51"
 		}
 	],
 	"settings": {
