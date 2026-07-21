@@ -15,8 +15,8 @@ u_long sbusPacketPrintPrevTime = 0;
 u_long sbusPrevPacketTime;
 bool sbusLost = false;
 
-#define SBUS_VAL_MIN 176 // 191
-#define SBUS_VAL_MAX 1808 // 1793
+#define SBUS_VAL_MIN 174 // 191
+#define SBUS_VAL_MAX 1810 // 1793
 #define SBUS_VAL_CENTER 992
 #define SBUS_VAL_DEADBAND 6
 #define SBUS_LOST_TIMEOUT 100
