@@ -1623,7 +1623,7 @@
 			)
 		)
 	)
-	(global_label "A0_DAC_THROTTLE"
+	(global_label "A1_DAC_THROTTLE"
 		(shape input)
 		(at 77.47 62.23 0)
 		(fields_autoplaced yes)
@@ -1711,7 +1711,7 @@
 			)
 		)
 	)
-	(global_label "A1_DAC_YAW"
+	(global_label "A0_DAC_YAW"
 		(shape input)
 		(at 152.4 52.07 180)
 		(fields_autoplaced yes)
@@ -1733,7 +1733,7 @@
 			)
 		)
 	)
-	(global_label "A0_DAC_THROTTLE"
+	(global_label "A1_DAC_THROTTLE"
 		(shape input)
 		(at 152.4 36.83 180)
 		(fields_autoplaced yes)
@@ -1843,7 +1843,7 @@
 			)
 		)
 	)
-	(global_label "A1_DAC_YAW"
+	(global_label "A0_DAC_YAW"
 		(shape input)
 		(at 77.47 59.69 0)
 		(fields_autoplaced yes)
