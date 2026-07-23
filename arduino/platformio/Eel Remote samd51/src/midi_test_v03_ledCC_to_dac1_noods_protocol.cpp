@@ -42,7 +42,11 @@ DeadbandMinMax deadbandMinMax1024 = {126, 940}; // FYI: for eel #1, a solid rang
 // DeadbandMinMax deadbandMinMax4096 = {128, 3800}; // lower max becomes higher rx values
 // 4096 band, the 'ideal' bounds appear to be [~128, ~3772]
 // DeadbandMinMax deadbandMinMax4096 = {50, 3975}; // higher max becomes higher rx values
+
 DeadbandMinMax deadbandMinMax4096 = {35, 4015}; // higher max becomes higher rx values
+// 2026-07-21 -> after installing the breakout board, calibrated low/high was 497 / 3723 (wtf?) -> this just keeps being random.
+// 2026-07-23 -> 473 / 3730
+
 // {512, 640, 768, 896};
 
 byte ledPWMVal = 0;
@@ -94,8 +98,8 @@ uint16_t bitmashed_outs[] = {0, 0, 0, 0};
 #define NOOD_VALUES_TRANSMISSION_BANDWIDTH 24
 
 uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896}; // corresponds to upper bits 100, 101, 110, 111 (10-bit values)
-// uint16_t n00dSegmentIdentifiers[] = {2048, 2560, 3072, 3584};           // corresponds to upper bits 100, 101, 110, 111 (12-bit values)
-byte n00dSegmentMaxValue = (127 - NOOD_VALUES_TRANSMISSION_BANDWIDTH); // was 55 (== 63 - 8) -> maybe try 127 - 16? -> update: yes, this works fine!
+// uint16_t n00dSegmentIdentifiers[] = {2048, 2560, 3072, 3584};          // corresponds to upper bits 100, 101, 110, 111 (12-bit values)
+byte n00dSegmentMaxValue = (127 - NOOD_VALUES_TRANSMISSION_BANDWIDTH); // helps prevent overflows on the upper side
 
 // USB MIDI object
 Adafruit_USBD_MIDI usb_midi;
