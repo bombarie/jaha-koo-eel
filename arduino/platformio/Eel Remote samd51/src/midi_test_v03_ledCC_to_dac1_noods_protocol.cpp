@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <Adafruit_TinyUSB.h>
 #include <MIDI.h>
+#include <FlashStorage_SAMD.h>
 
 /*
 
@@ -43,9 +44,25 @@ DeadbandMinMax deadbandMinMax1024 = {126, 940}; // FYI: for eel #1, a solid rang
 // 4096 band, the 'ideal' bounds appear to be [~128, ~3772]
 // DeadbandMinMax deadbandMinMax4096 = {50, 3975}; // higher max becomes higher rx values
 
-DeadbandMinMax deadbandMinMax4096 = {35, 4015}; // higher max becomes higher rx values
+DeadbandMinMax deadbandMinMax4096 = {35, 4015}; // This is overwritten by the saved FlashStorage values
 // 2026-07-21 -> after installing the breakout board, calibrated low/high was 497 / 3723 (wtf?) -> this just keeps being random.
 // 2026-07-23 -> 473 / 3730
+
+// Persists deadbandMinMax4096 across power cycles using flash-emulated storage (internal flash on the SAMD51,
+// not classic AVR PROGMEM, which is read-only at runtime). The signature marks whether flash actually holds a
+// previously-saved value, since erased/unwritten flash won't reliably read back as this struct's zero value.
+struct DeadbandMinMax4096Flash
+{
+    uint16_t min;
+    uint16_t max;
+    uint32_t signature;
+};
+#define DEADBAND_MIN_MAX_4096_FLASH_SIGNATURE 0x5A5AA5A5
+FlashStorage(deadbandMinMax4096FlashStore, DeadbandMinMax4096Flash);
+
+bool deadbandMinMax4096Dirty = false;
+unsigned long deadbandMinMax4096LastChangeMillis = 0;
+const unsigned long deadbandMinMax4096SaveDelay = 5000; // wait for this many quiet ms before committing to flash, to avoid wearing it out
 
 // {512, 640, 768, 896};
 
@@ -125,6 +142,9 @@ void updateSendLoop();
 uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range);
 uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range);
 uint16_t mapToActualMinMax_4096(uint16_t val, uint16_t range);
+void loadDeadbandMinMax4096FromFlash();
+void markDeadbandMinMax4096Changed();
+void updateDeadbandMinMax4096FlashSave();
 
 void BlinkLed(byte num) // Basic blink function
 {
@@ -177,6 +197,8 @@ void setup()
 
     BlinkLed(2);
 
+    loadDeadbandMinMax4096FromFlash();
+
     Serial.println("Press '1', '2', '3', '4' to select the channel to print.");
     Serial.println("Press 'a' to print all channels.");
     Serial.println("Press 's' to toggle printing serial values");
@@ -206,6 +228,8 @@ void loop()
     updateProcessLoop();
 
     updateSendLoop();
+
+    updateDeadbandMinMax4096FlashSave();
 }
 
 void updateProcessLoop()
@@ -390,17 +414,20 @@ void checkIncomingSerial()
             if (deadbandMinMax4096.min > 0)
             {
                 deadbandMinMax4096.min -= 1;
+                markDeadbandMinMax4096Changed();
                 Serial.println("Lowered deadbandMinMax4096.min to: " + String(deadbandMinMax4096.min));
             }
             break;
         case ']':
             // raise the bottom end of the deadband range for 4096 mapping
             deadbandMinMax4096.min += 1;
+            markDeadbandMinMax4096Changed();
             Serial.println("Raised deadbandMinMax4096.min to: " + String(deadbandMinMax4096.min));
             break;
         case '{':
             // lower the bottom end of the deadband range for 4096 mapping
             deadbandMinMax4096.max -= 1;
+            markDeadbandMinMax4096Changed();
             Serial.println("Lowered deadbandMinMax4096.max to: " + String(deadbandMinMax4096.max));
             break;
         case '}':
@@ -408,6 +435,7 @@ void checkIncomingSerial()
             if (deadbandMinMax4096.max < 4095)
             {
                 deadbandMinMax4096.max += 1;
+                markDeadbandMinMax4096Changed();
                 Serial.println("Raised deadbandMinMax4096.max to: " + String(deadbandMinMax4096.max));
             }
             break;
@@ -586,6 +614,44 @@ uint16_t mapToActualMinMax_4096(uint16_t val, uint16_t range)
         // return constrain(map(val, 0, 4095, 127, 3968), 0, 4095);
         return constrain(map(val, 0, 4095, deadbandMinMax4096.min, deadbandMinMax4096.max), 0, 4095);
         break;
+    }
+}
+
+void loadDeadbandMinMax4096FromFlash()
+{
+    DeadbandMinMax4096Flash stored;
+    deadbandMinMax4096FlashStore.read(stored);
+
+    if (stored.signature == DEADBAND_MIN_MAX_4096_FLASH_SIGNATURE)
+    {
+        deadbandMinMax4096.min = stored.min;
+        deadbandMinMax4096.max = stored.max;
+        Serial.println("Loaded deadbandMinMax4096 from flash -> min: " + String(deadbandMinMax4096.min) + ", max: " + String(deadbandMinMax4096.max));
+    }
+    else
+    {
+        Serial.println("No saved deadbandMinMax4096 found in flash, using defaults -> min: " + String(deadbandMinMax4096.min) + ", max: " + String(deadbandMinMax4096.max));
+    }
+}
+
+void markDeadbandMinMax4096Changed()
+{
+    deadbandMinMax4096Dirty = true;
+    deadbandMinMax4096LastChangeMillis = millis();
+}
+
+void updateDeadbandMinMax4096FlashSave()
+{
+    if (deadbandMinMax4096Dirty && (millis() - deadbandMinMax4096LastChangeMillis > deadbandMinMax4096SaveDelay))
+    {
+        DeadbandMinMax4096Flash toStore;
+        toStore.min = deadbandMinMax4096.min;
+        toStore.max = deadbandMinMax4096.max;
+        toStore.signature = DEADBAND_MIN_MAX_4096_FLASH_SIGNATURE;
+        deadbandMinMax4096FlashStore.write(toStore);
+
+        deadbandMinMax4096Dirty = false;
+        Serial.println("Saved deadbandMinMax4096 to flash -> min: " + String(deadbandMinMax4096.min) + ", max: " + String(deadbandMinMax4096.max));
     }
 }
 
