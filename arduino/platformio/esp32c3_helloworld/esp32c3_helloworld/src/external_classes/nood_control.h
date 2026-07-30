@@ -180,6 +180,7 @@ void doNextItemChange()
     // Let's see if this filtering approach works....
     // If there's a small diff, take new val right away.
     // If there's a big jump, lerp towards it.
+    // The idea is that this should help prevent sudden glitches, resulting from one channel's value being wrongfully overwritten by another channel's value
     if (
         (newVal > noodVals[currSelectedChannel]) &&
         abs(noodVals[currSelectedChannel] - newVal) > 100)
