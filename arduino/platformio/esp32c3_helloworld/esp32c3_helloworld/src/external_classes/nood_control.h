@@ -89,12 +89,15 @@ void updateBodyLightValues()
   switch (ELRSParseMethod)
   {
   case 0:
+    // no clever waiting for the next logical channel, just direct parsing of the received input
     doDirectChange();
     break;
   case 1:
+    // only change channel if multiple frames point to that channel consistently
     doThresholdChange();
     break;
   case 2:
+    // Like doThresholdChange(), but this algorithm only accepts the logical 'next channel', and discards anything different.
     doNextItemChange();
     break;
   }
