@@ -42,8 +42,10 @@ DeadbandMinMax deadbandMinMax1024 = {126, 940}; // FYI: for eel #1, a solid rang
 // DeadbandMinMax deadbandMinMax4096 = {128, 3800}; // lower max becomes higher rx values
 // 4096 band, the 'ideal' bounds appear to be [~128, ~3772]
 // DeadbandMinMax deadbandMinMax4096 = {50, 3975}; // higher max becomes higher rx values
-DeadbandMinMax deadbandMinMax4096 = {35, 4015}; // higher max becomes higher rx values
+DeadbandMinMax deadbandMinMax4096 = {600, 3400}; // higher max becomes higher rx values
 // {512, 640, 768, 896};
+// 2026-07-23 -> 473 / 3730
+// 2026-08-03 -> 256 / 3755
 
 byte ledPWMVal = 0;
 uint16_t audioVal = 0;
@@ -86,6 +88,28 @@ unsigned long prevBitmashChangeChannelMills;
 unsigned long bitmashChangeChannelInterval = 1000 / 60; // in Hz -> ie 100Hz means that each channel is outputted at 25Hz
 byte bitmashSendChannel = 0;
 
+// intermittently, right after the 4th regular channel (index 3), we inject three extra 'channels' that
+// send the lower, upper, then lower again bound calibration values (LOW -> HIGH -> LOW), so the receiver
+// can calibrate against the actual analog range instead of assuming it lines up exactly with the nominal
+// 0-1023 range. The repeated LOW gives the receiver a second, clearer look at the lower bound.
+#define NOOD_SEND_CALIB_LOWER 4
+#define NOOD_SEND_CALIB_UPPER 5
+#define NOOD_SEND_CALIB_LOWER2 6
+#define NOOD_CALIB_LOWER_BOUND_VALUE 0    // matches the receiver's "top 3 bits == 0" lower-bound marker check
+#define NOOD_CALIB_UPPER_BOUND_VALUE 1023 // matches the receiver's "> 512" upper-bound marker check
+#define NOOD_CALIB_TRIGGER_NOTE 72        // MIDI note number for C4 (middle C)
+
+unsigned long noodCalibSequenceIntervalSeconds = 120;                                // how often, in seconds, to inject the calibration sequence
+unsigned long noodCalibSequenceInterval = noodCalibSequenceIntervalSeconds * 1000UL; // in ms
+unsigned long prevNoodCalibSequenceMillis = 0;
+
+// flip this off to disable the automatic, periodic calibration sequence entirely
+bool bEnableNoodCalibSequence = false;
+
+// set by triggerNoodCalibSequence() to request a single calibration sequence be run
+// at the next opportune moment, regardless of bEnableNoodCalibSequence / the periodic timer
+bool bNoodCalibSequenceRequested = false;
+
 uint16_t bitmashed_out = 0;
 uint16_t bitmashed_outs[] = {0, 0, 0, 0};
 
@@ -116,8 +140,11 @@ void serialPrintDebugValues();
 void processMIDI(void);
 void printBytes(const byte *data, unsigned int size);
 void handleControlChange(byte channel, byte data1, byte data2);
+void handleNoteOn(byte channel, byte pitch, byte velocity);
 void updateProcessLoop();
 void updateSendLoop();
+void updateCalibrationLed();
+void triggerNoodCalibSequence();
 uint8_t mapToActualMinMax_256(uint8_t val, uint8_t range);
 uint16_t mapToActualMinMax_1024(uint16_t val, uint16_t range);
 uint16_t mapToActualMinMax_4096(uint16_t val, uint16_t range);
@@ -160,6 +187,7 @@ void setup()
     // Attach the handleControlChange function to the MIDI Library. It will
     // be called whenever the Bluefruit receives MIDI Control Change messages.
     MIDI.setHandleControlChange(handleControlChange);
+    MIDI.setHandleNoteOn(handleNoteOn);
 
     pinMode(LED_BUILTIN, OUTPUT);
 
@@ -199,6 +227,9 @@ void loop()
     // handles cycling through the n00d channels at fixed intervals
     updateSelectedNoodSendIndex();
 
+    // the built-in LED (bright red on the Feather M4 Express) lights up while calibration values are being sent
+    updateCalibrationLed();
+
     updateProcessLoop();
 
     updateSendLoop();
@@ -229,16 +260,65 @@ void updateSendLoop()
 
 void updateSelectedNoodSendIndex()
 {
-    if (millis() - prevBitmashChangeChannelMills > bitmashChangeChannelInterval)
+    // calibration states get shown twice as long so the receiver reliably picks up the bound values
+    unsigned long currentChangeChannelInterval = (bitmashSendChannel == NOOD_SEND_CALIB_LOWER || bitmashSendChannel == NOOD_SEND_CALIB_UPPER || bitmashSendChannel == NOOD_SEND_CALIB_LOWER2)
+                                                     ? bitmashChangeChannelInterval * 2
+                                                     : bitmashChangeChannelInterval;
+
+    if (millis() - prevBitmashChangeChannelMills > currentChangeChannelInterval)
     {
-        bitmashSendChannel++;
-        if (bitmashSendChannel > 3)
+        if (bitmashSendChannel == NOOD_SEND_CALIB_LOWER)
+        {
+            bitmashSendChannel = NOOD_SEND_CALIB_UPPER;
+        }
+        else if (bitmashSendChannel == NOOD_SEND_CALIB_UPPER)
+        {
+            bitmashSendChannel = NOOD_SEND_CALIB_LOWER2;
+        }
+        else if (bitmashSendChannel == NOOD_SEND_CALIB_LOWER2)
         {
             bitmashSendChannel = 0;
+        }
+        else
+        {
+            bitmashSendChannel++;
+            if (bitmashSendChannel > 3)
+            {
+                bool bAutoCalibDue = bEnableNoodCalibSequence && (millis() - prevNoodCalibSequenceMillis > noodCalibSequenceInterval);
+
+                if (bAutoCalibDue || bNoodCalibSequenceRequested)
+                {
+                    if (bSerialPrintValues)
+                    {
+                        Serial.println("sending NOOD_SEND_CALIB_LOWER");
+                    }
+                    // only at the end of a regular sequence (index 3), inject the calibration sequence before wrapping back to 0
+                    bitmashSendChannel = NOOD_SEND_CALIB_LOWER;
+                    prevNoodCalibSequenceMillis = millis();
+                    bNoodCalibSequenceRequested = false;
+                }
+                else
+                {
+                    bitmashSendChannel = 0;
+                }
+            }
         }
 
         prevBitmashChangeChannelMills = millis();
     }
+}
+
+void triggerNoodCalibSequence()
+{
+    // the actual injection happens inside updateSelectedNoodSendIndex(), once the regular
+    // channel cycle reaches its end point (right before wrapping back to channel 0)
+    bNoodCalibSequenceRequested = true;
+}
+
+void updateCalibrationLed()
+{
+    bool bCalibrating = (bitmashSendChannel == NOOD_SEND_CALIB_LOWER || bitmashSendChannel == NOOD_SEND_CALIB_UPPER || bitmashSendChannel == NOOD_SEND_CALIB_LOWER2);
+    digitalWrite(LED_BUILTIN, bCalibrating ? HIGH : LOW);
 }
 
 void calcNoodOutputValues()
@@ -261,6 +341,15 @@ void calcNoodOutputValues()
         bitmashed_out = n00dSegmentIdentifiers[3];
         bitmashed_out += map(bitmash_nood2b, 0, 127, 0, n00dSegmentMaxValue);
         break;
+    case NOOD_SEND_CALIB_LOWER:
+    case NOOD_SEND_CALIB_LOWER2:
+        // intermittently sent so the receiver can calibrate its observed lower bound
+        bitmashed_out = NOOD_CALIB_LOWER_BOUND_VALUE;
+        return;
+    case NOOD_SEND_CALIB_UPPER:
+        // intermittently sent so the receiver can calibrate its observed upper bound
+        bitmashed_out = NOOD_CALIB_UPPER_BOUND_VALUE;
+        return;
     }
 
     // bitmashed_out = mapToActualMinMax_1024(bitmashed_out, DEADBAND_INPUT_RANGE::_1024);
@@ -333,6 +422,7 @@ void checkIncomingSerial()
         char inChar = Serial.read();
         switch (inChar)
         {
+
         case '1':
             Serial.println("Outputting only nood1a");
             channelToPrint = 0;
@@ -353,6 +443,12 @@ void checkIncomingSerial()
             Serial.println("Outputting all noods");
             channelToPrint = 255;
             break;
+
+        case 'c':
+            Serial.println("Trigger calibration sequence");
+            triggerNoodCalibSequence();
+            break;
+
         case 'd':
             Serial.println("DEBUG - output midi cc 10 to dac1");
             channelToPrint = 10;
@@ -361,16 +457,20 @@ void checkIncomingSerial()
             Serial.println("DEBUG - output midi cc 11 to dac1");
             channelToPrint = 11;
             break;
+
         case 'p':
             bSerialPrintPWMValues = !bSerialPrintPWMValues;
             Serial.println("DEBUG - toggle showing pwm values >> set to " + String(bSerialPrintPWMValues));
             break;
+
         case 's':
             bSerialPrintValues = !bSerialPrintValues;
             break;
 
         case 'h':
             Serial.println("Press '1', '2', '3', '4' to select the channel to print.");
+            Serial.println("Press '9' to send lower bound (value 0)");
+            Serial.println("Press '0' to send upper bound (value 1023)");
             Serial.println("Press 'a' to print all channels.");
             Serial.println("Press 's' to toggle printing serial values");
             Serial.println("Press 'd' to output midi cc 10 to dac1");
@@ -407,13 +507,24 @@ void checkIncomingSerial()
                 Serial.println("Raised deadbandMinMax4096.max to: " + String(deadbandMinMax4096.max));
             }
             break;
-        }
 
-        // don't know if this is necessary but I always flush the serial buffer
-        while (Serial.available() > 0)
-        {
-            Serial.read();
+        case '9':
+            // send lower bound (value 0)
+            Serial.println("sending lower bound value (0)");
+            bitmashSendChannel = NOOD_CALIB_LOWER_BOUND_VALUE;
+            break;
+        case '0':
+            // send upper bound (value 1023)
+            Serial.println("upper lower bound value (1023)");
+            bitmashSendChannel = NOOD_CALIB_UPPER_BOUND_VALUE;
+            break;
         }
+    }
+
+    // don't know if this is necessary but I always flush the serial buffer
+    while (Serial.available() > 0)
+    {
+        Serial.read();
     }
 }
 
@@ -462,6 +573,17 @@ void serialPrintDebugValues()
     //*/
 
     Serial.println();
+}
+
+void handleNoteOn(byte channel, byte pitch, byte velocity)
+{
+    // Serial.println("Receive Note On >>  channel: " + String(channel) + ", pitch: " + String(pitch) + ", velocity: " + String(velocity));
+
+    if (pitch == NOOD_CALIB_TRIGGER_NOTE && velocity > 0)
+    {
+        Serial.println("Triggering calibration sequence via MIDI note-on");
+        triggerNoodCalibSequence();
+    }
 }
 
 void handleControlChange(byte channel, byte data1, byte data2)
