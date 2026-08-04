@@ -5,7 +5,7 @@ const uint8_t resolution = 8;
 bool printSbusData = false;
 
 int16_t nood1a, nood1b, nood2a, nood2b;
-uint16_t throttle, throttleAdjusted;
+uint16_t throttle, throttleAdjusted, throttleSmoothed;
 
 enum HEAD_STATE
 {
