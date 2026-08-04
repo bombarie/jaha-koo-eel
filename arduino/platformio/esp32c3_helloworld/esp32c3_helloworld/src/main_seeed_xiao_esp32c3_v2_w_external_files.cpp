@@ -9,6 +9,19 @@
 #include "external_classes/nood_control.h"
 #include "external_classes/serial_io.h"
 
+/*
+
+FYI: Serial Monitor commands:
+1 -> outputting only nood1a
+2 -> outputting only nood1b
+3 -> outputting only nood2a
+4 -> outputting only nood2b
+a -> outputting all noods (DEFAULT)
+s -> print incoming sbus data
+x -> print nothing (no noods and no sbus data)
+
+*/
+
 float sinCounter = 0.0;
 float sinCounterIncrement = 0.05;
 
@@ -35,47 +48,45 @@ void setup()
 
 void loop()
 {
-  // read SBUS
-  parseSBUS(printSbusData);
-
-  updateSerialIO();
-
-  updateHeadBodyState();
-
-  // determine how to set the head and body lights
-  switch (connectionState)
+  EVERY_N_MILLIS(1000 / 500)
   {
-  case DISCONNECTED:
-    resetSbusData();
-    updateHeadBodyLights_disconnected();
-    break;
-  case CONNECTION_ESTABLISHED:
-    // maybe do some temporary transition lighting here from disconnected to connected, but for now just go to connected
-    connectionState = CONNECTED;
-    break;
-  case CONNECTION_LOST:
-    // maybe do some temporary transition lighting here from connected to disconnected, but for now just go to disconnected
-    connectionState = DISCONNECTED;
-    break;
-  case CONNECTED:
-    updateBodyLightValues();
-    updateHeadLightValues();
-    break;
+    // read SBUS
+    parseSBUS(printSbusData);
   }
 
-  setBodyLights();
-  setHeadLights();
+  EVERY_N_MILLIS(1000 / 300)
+  {
+    updateSerialIO();
 
-  calcMotorValues();
-  driveMotors();
+    updateHeadBodyState();
 
-  // EVERY_N_SECONDS(1)
-  // {
-  //   Serial.println("connectionState: " + String(connectionState) + ", headState: " + String(headState));
-  // }
+    // determine how to set the head and body lights
+    switch (connectionState)
+    {
+    case DISCONNECTED:
+      resetSbusData();
+      updateHeadBodyLights_disconnected();
+      break;
+    case CONNECTION_ESTABLISHED:
+      // maybe do some temporary transition lighting here from disconnected to connected, but for now just go to connected
+      connectionState = CONNECTED;
+      break;
+    case CONNECTION_LOST:
+      // maybe do some temporary transition lighting here from connected to disconnected, but for now just go to disconnected
+      connectionState = DISCONNECTED;
+      break;
+    case CONNECTED:
+      updateBodyLightValues();
+      updateHeadLightValues();
+      break;
+    }
 
-  // delay a little.
-  delay(1000 / 200);
+    setBodyLights();
+    setHeadLights();
+
+    calcMotorValues();
+    driveMotors();
+  }
 }
 
 void updateHeadBodyState()
@@ -109,11 +120,14 @@ void updateHeadBodyLights_disconnected()
   noodAvgVals[3] = 0;
 
   // blink rgb leds red
-  if ((millis() / 500) % 2 == 0) {
+  if ((millis() / 500) % 2 == 0)
+  {
     rgbLeds[RIGHT_EYE] = pixels.Color(255, 0, 0);
     rgbLeds[MOUTH] = pixels.Color(255, 0, 0);
     rgbLeds[LEFT_EYE] = pixels.Color(255, 0, 0);
-  } else {
+  }
+  else
+  {
     rgbLeds[RIGHT_EYE] = pixels.Color(0, 0, 0);
     rgbLeds[MOUTH] = pixels.Color(0, 0, 0);
     rgbLeds[LEFT_EYE] = pixels.Color(0, 0, 0);

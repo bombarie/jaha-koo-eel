@@ -14,9 +14,6 @@ EelMotor motor2(motor2a_pin, motor2b_pin, motor2_chan, resolution, freq);
 int16_t motor1Val;
 int16_t motor2Val;
 
-int16_t n00d1a, n00d1b, n00d2a, n00d2b;
-uint16_t throttle, throttleAdjusted;
-
 void initMotors();
 void calcMotorValues();
 void driveMotors();
