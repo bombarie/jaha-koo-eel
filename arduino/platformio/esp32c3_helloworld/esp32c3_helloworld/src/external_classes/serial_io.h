@@ -76,15 +76,24 @@ void updateSerialIO()
             Serial.print(noodVals[2]);
             Serial.print("\t nood2b: ");
             Serial.println(noodVals[3]);
+            Serial.print("nood1a_smooth: ");
+            Serial.print(noodAvgVals[0]);
+            Serial.print("\t nood1b_smooth: ");
+            Serial.print(noodAvgVals[1]);
+            Serial.print("\t nood2a_smooth: ");
+            Serial.print(noodAvgVals[2]);
+            Serial.print("\t nood2b_smooth: ");
+            Serial.println(noodAvgVals[3]);
             Serial.println("currSelectedChannel: " + String(currSelectedChannel) + "\t channelChangeCounter: " + String(channelChangeCounter));
             Serial.println("");
         }
     }
 
-    EVERY_N_MILLIS(5)
+    EVERY_N_MILLIS(4)
     {
         if (channelToPrint == 101) // everything (TelePlot)
         {
+           
             Serial.print(">thr:");
             Serial.println(throttle);
             Serial.print(">thrSmth:");
@@ -108,10 +117,21 @@ void updateSerialIO()
             Serial.print(">nood2b_smth:");
             Serial.println(noodAvgVals[3]);
 
-            // Serial.print(">throttleSmthFctr:");
-            // Serial.println(throttleSmoothFactor);
-            // Serial.print(">channelChangeThrsh:");
-            // Serial.println(channelChangeThreshold);
+            Serial.print(">calibLowerBound:");
+            Serial.println(calibLowerBound);
+            Serial.print(">calibUpperBound:");
+            Serial.println(calibUpperBound);
+            Serial.print(">calibThreshold:");
+            Serial.println(calibThreshold);
+            Serial.print(">calibratedThrottle:");
+            Serial.println(calibratedThrottle);
+            Serial.print(">calibDetectedChannel:");
+            Serial.println(calibDetectedChannel);
+            Serial.print(">calibDetectedChannelSmooth:");
+            Serial.println(calibDetectedChannelSmooth);
+
+            Serial.print(">calibState:");
+            Serial.println(calibState);
 
             Serial.print(">currSelectedCh:");
             Serial.println(currSelectedChannel);
@@ -119,8 +139,6 @@ void updateSerialIO()
             Serial.println(currDetectedChannelSmooth);
             Serial.print(">currDetectedChFst:");
             Serial.println(currDetectedChannel);
-            Serial.print(">nextChannelIndex:");
-            Serial.println(nextChannelIndex);
             Serial.print(">channelChangeCtr:");
             Serial.println(channelChangeCounter);
         }
@@ -160,7 +178,12 @@ void checkIncomingSerial()
             channelToPrint = 90;
             break;
 
-        case 'r': // DEBUG - reset currSelectedChannel, currDetectedChannel, prevDetectedChannel and nextChannelIndex
+        case 'l': // DEBUG
+            bListenForIncomingCalibration = !bListenForIncomingCalibration;
+            Serial.println("set bListenForIncomingCalibration to " + String(bListenForIncomingCalibration));
+            break;
+
+            case 'r': // DEBUG - reset currSelectedChannel, currDetectedChannel, prevDetectedChannel and nextChannelIndex
             currSelectedChannel = 0;
             currDetectedChannelSmooth = 0;
             prevDetectedChannel = 0;
@@ -192,17 +215,21 @@ void checkIncomingSerial()
             Serial.println("Set throttleSmoothFactor to " + String(throttleSmoothFactor));
             break;
 
-        case '8':
+        case '7':
             Serial.println("change elrs parse method to doDirectChange()");
             ELRSParseMethod = 0;
             break;
-        case '9':
+        case '8':
             Serial.println("change elrs parse method to doThresholdChange()");
             ELRSParseMethod = 1;
             break;
-        case '0':
+        case '9':
             Serial.println("change elrs parse method to doNextItemChange()");
             ELRSParseMethod = 2;
+            break;
+        case '0':
+            Serial.println("change elrs parse method to doThresholdChangeCalibrated()");
+            ELRSParseMethod = 3;
             break;
 
         case 'a': // all noods
