@@ -7,8 +7,8 @@ void setup()
 
 void loop()
 {
-  Serial.println("Hello....");
+  Serial.println("Hallo....");
   delay(1000);
-  Serial.println("....World!");
+  Serial.println("....Welt!");
   delay(1000);
 }
