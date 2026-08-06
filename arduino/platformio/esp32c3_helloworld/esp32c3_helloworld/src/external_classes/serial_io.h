@@ -85,6 +85,7 @@ void updateSerialIO()
             Serial.print("\t nood2b_smooth: ");
             Serial.println(noodAvgVals[3]);
             Serial.println("currSelectedChannel: " + String(currSelectedChannel) + "\t channelChangeCounter: " + String(channelChangeCounter));
+            Serial.println("headState: " + String(headState));
             Serial.println("");
         }
     }
