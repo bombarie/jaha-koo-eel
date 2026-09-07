@@ -56,7 +56,8 @@ DeadbandMinMax deadbandMinMax1024 = {126, 940}; // FYI: for eel #1, a solid rang
 #if defined(PLATFORM_SAMD51)
 DeadbandMinMax deadbandMinMax4096 = {600, 3400}; // default; may be overwritten by the saved persisted values
 #elif defined(PLATFORM_TEENSY)
-DeadbandMinMax deadbandMinMax4096 = {504, 3760}; // recalced fromdeadbandMinMax1024 >> should/could be suitable values for eel #1
+// DeadbandMinMax deadbandMinMax4096 = {504, 3760}; // recalced fromdeadbandMinMax1024 >> should/could be suitable values for eel #1
+DeadbandMinMax deadbandMinMax4096 = {600, 3400}; // let's see if the SAMD51's default values are suitable for the Teensy as well
 #endif
 
 // Persists deadbandMinMax4096 across power cycles: FlashStorage_SAMD (flash-emulated) on the SAMD51,
@@ -129,6 +130,10 @@ unsigned long prevBitmashChangeChannelMills;
 unsigned long bitmashChangeChannelInterval = 1000 / 60; // in Hz -> ie 100Hz means that each channel is outputted at 25Hz
 byte bitmashSendChannel = 0;
 
+bool postCalibrationCooldown = false;
+ulong postCalibrationCooldownStartMillis = 0;
+ulong postCalibrationCooldownDurationMillis = 3300; // x seconds cooldown after a calibration sequence, to avoid sending the next calibration sequence too quickly
+
 // intermittently, right after the 4th regular channel (index 3), we inject three extra 'channels' that
 // send the lower, upper, then lower again bound calibration values (LOW -> HIGH -> LOW), so the receiver
 // can calibrate against the actual analog range instead of assuming it lines up exactly with the nominal
@@ -158,7 +163,7 @@ uint16_t bitmashed_outs[] = {0, 0, 0, 0};
 // Effectively, determines the resolution of the noods. 0 is no deadband, 127 is max deadband.
 #define NOOD_VALUES_TRANSMISSION_BANDWIDTH 24
 
-uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896}; // corresponds to upper bits 100, 101, 110, 111 (10-bit values)
+uint16_t n00dSegmentIdentifiers[] = {512, 640, 768, 896};              // corresponds to upper bits 100, 101, 110, 111 (10-bit values)
 byte n00dSegmentMaxValue = (127 - NOOD_VALUES_TRANSMISSION_BANDWIDTH); // helps prevent overflows on the upper side
 
 #if defined(PLATFORM_SAMD51)
@@ -181,6 +186,7 @@ void calcNoodOutputValues();
 void checkIncomingSerial();
 void updateSerialPrintValues();
 void serialPrintDebugValues();
+void setCalcedNoodValue(byte channel, byte value);
 void printBytes(const byte *data, unsigned int size);
 void handleControlChange(byte channel, byte data1, byte data2);
 void handleNoteOn(byte channel, byte pitch, byte velocity);
@@ -297,6 +303,8 @@ void loop()
     updateDeadbandMinMax4096StorageSave();
 }
 
+byte tmpBitmashNoodvals[] = {0, 0, 0, 0}; // temp storage for nood values while processing MIDI messages
+
 void updateProcessLoop()
 {
     checkIncomingSerial();
@@ -307,6 +315,30 @@ void updateProcessLoop()
     if (channelToPrint != 255)
     {
         overrideNoodOutputValues();
+    }
+
+    if (postCalibrationCooldown)
+    {
+        Serial.println("postasxsSazxCalibrationCooldown running, resetting nood values to 0");
+
+        // set the nood values to 0 during the cooldown period, so the receiver doesn't get confused by the calibration values
+        bitmash_nood1a = 0;
+        bitmash_nood1b = 0;
+        bitmash_nood2a = 0;
+        bitmash_nood2b = 0;
+
+        if (millis() - postCalibrationCooldownStartMillis > postCalibrationCooldownDurationMillis)
+        {
+            Serial.println("postCalibrationCooldown finished");
+
+            // restore the last known nood values, so the next calibration sequence can be sent with the correct values
+            bitmash_nood1a = tmpBitmashNoodvals[0];
+            bitmash_nood1b = tmpBitmashNoodvals[1];
+            bitmash_nood2a = tmpBitmashNoodvals[2];
+            bitmash_nood2b = tmpBitmashNoodvals[3];
+
+            postCalibrationCooldown = false;
+        }
     }
 
     if (bSerialPrintValues)
@@ -339,7 +371,12 @@ void updateSelectedNoodSendIndex()
         }
         else if (bitmashSendChannel == NOOD_SEND_CALIB_LOWER2)
         {
+            // after the second lower-bound calibration value, wrap back to the regular channel cycle
             bitmashSendChannel = 0;
+
+            postCalibrationCooldown = true;
+            Serial.println("postCalibrationCooldown started");
+            postCalibrationCooldownStartMillis = millis();
         }
         else
         {
@@ -354,6 +391,13 @@ void updateSelectedNoodSendIndex()
                     {
                         Serial.println("sending NOOD_SEND_CALIB_LOWER");
                     }
+
+                    // store the current nood values so they can be restored after the calibration sequence is done
+                    tmpBitmashNoodvals[0] = bitmash_nood1a;
+                    tmpBitmashNoodvals[1] = bitmash_nood1b;
+                    tmpBitmashNoodvals[2] = bitmash_nood2a;
+                    tmpBitmashNoodvals[3] = bitmash_nood2b;
+
                     // only at the end of a regular sequence (index 3), inject the calibration sequence before wrapping back to 0
                     bitmashSendChannel = NOOD_SEND_CALIB_LOWER;
                     prevNoodCalibSequenceMillis = millis();
@@ -383,25 +427,46 @@ void updateCalibrationLed()
     digitalWrite(LED_BUILTIN, bCalibrating ? HIGH : LOW);
 }
 
+void setCalcedNoodValue(byte channel, byte value)
+{
+    switch (channel)
+    {
+    case 0:
+        bitmashed_out = n00dSegmentIdentifiers[0];
+        bitmashed_out += map(value, 0, 127, 0, n00dSegmentMaxValue);
+        break;
+    case 1:
+        bitmashed_out = n00dSegmentIdentifiers[1];
+        bitmashed_out += map(value, 0, 127, 0, n00dSegmentMaxValue);
+        break;
+    case 2:
+        bitmashed_out = n00dSegmentIdentifiers[2];
+        bitmashed_out += map(value, 0, 127, 0, n00dSegmentMaxValue);
+        break;
+    case 3:
+        bitmashed_out = n00dSegmentIdentifiers[3];
+        bitmashed_out += map(value, 0, 127, 0, n00dSegmentMaxValue);
+        break;
+    }
+
+    bitmashed_outs[channel] = bitmashed_out;
+}
+
 void calcNoodOutputValues()
 {
     switch (bitmashSendChannel)
     {
     case 0:
-        bitmashed_out = n00dSegmentIdentifiers[0];
-        bitmashed_out += map(bitmash_nood1a, 0, 127, 0, n00dSegmentMaxValue);
+        setCalcedNoodValue(0, bitmash_nood1a);
         break;
     case 1:
-        bitmashed_out = n00dSegmentIdentifiers[1];
-        bitmashed_out += map(bitmash_nood1b, 0, 127, 0, n00dSegmentMaxValue);
+        setCalcedNoodValue(1, bitmash_nood1b);
         break;
     case 2:
-        bitmashed_out = n00dSegmentIdentifiers[2];
-        bitmashed_out += map(bitmash_nood2a, 0, 127, 0, n00dSegmentMaxValue);
+        setCalcedNoodValue(2, bitmash_nood2a);
         break;
     case 3:
-        bitmashed_out = n00dSegmentIdentifiers[3];
-        bitmashed_out += map(bitmash_nood2b, 0, 127, 0, n00dSegmentMaxValue);
+        setCalcedNoodValue(3, bitmash_nood2b);
         break;
     case NOOD_SEND_CALIB_LOWER:
     case NOOD_SEND_CALIB_LOWER2:
@@ -422,24 +487,16 @@ void overrideNoodOutputValues()
     switch (channelToPrint)
     {
     case 0:
-        bitmashed_out = n00dSegmentIdentifiers[0];
-        bitmashed_out += map(bitmash_nood1a, 0, 127, 0, n00dSegmentMaxValue);
-        bitmashed_outs[0] = bitmashed_out;
+        setCalcedNoodValue(0, bitmash_nood1a);
         break;
     case 1:
-        bitmashed_out = n00dSegmentIdentifiers[1];
-        bitmashed_out += map(bitmash_nood1b, 0, 127, 0, n00dSegmentMaxValue);
-        bitmashed_outs[1] = bitmashed_out;
+        setCalcedNoodValue(1, bitmash_nood1b);
         break;
     case 2:
-        bitmashed_out = n00dSegmentIdentifiers[2];
-        bitmashed_out += map(bitmash_nood2a, 0, 127, 0, n00dSegmentMaxValue);
-        bitmashed_outs[2] = bitmashed_out;
+        setCalcedNoodValue(2, bitmash_nood2a);
         break;
     case 3:
-        bitmashed_out = n00dSegmentIdentifiers[3];
-        bitmashed_out += map(bitmash_nood2b, 0, 127, 0, n00dSegmentMaxValue);
-        bitmashed_outs[3] = bitmashed_out;
+        setCalcedNoodValue(3, bitmash_nood2b);
         break;
     case 10:
         bitmashed_out = map(cc10_val, 0, 127, 0, 1023);
