@@ -31,7 +31,7 @@ byte hVal = 0;
 byte vVal = 0;
 
 // define methods
-void updateHeadBodyLights_disconnected();
+void updateHeadBodyLights_blinking(uint16_t blinkDelay);
 void updateHeadBodyState();
 
 void setup()
@@ -65,7 +65,7 @@ void loop()
     {
     case DISCONNECTED:
       resetSbusData();
-      updateHeadBodyLights_disconnected();
+      updateHeadBodyLights_blinking(500);
       break;
     case CONNECTION_ESTABLISHED:
       // maybe do some temporary transition lighting here from disconnected to connected, but for now just go to connected
@@ -77,7 +77,16 @@ void loop()
       break;
     case CONNECTED:
       updateBodyLightValues();
-      updateHeadLightValues();
+
+      // display blinking red lights if calibrating
+      if (bListenForIncomingCalibration || calibBoundsPendingSave)
+      {
+        updateHeadBodyLights_blinking(200);
+      }
+      else
+      {
+        updateHeadLightValues();
+      }
       break;
     }
 
@@ -111,7 +120,7 @@ void updateHeadBodyState()
   }
 }
 
-void updateHeadBodyLights_disconnected()
+void updateHeadBodyLights_blinking(uint16_t blinkDelay)
 {
   // set noods off
   noodAvgVals[0] = 0;
@@ -120,7 +129,7 @@ void updateHeadBodyLights_disconnected()
   noodAvgVals[3] = 0;
 
   // blink rgb leds red
-  if ((millis() / 500) % 2 == 0)
+  if ((millis() / blinkDelay) % 2 == 0)
   {
     rgbLeds[RIGHT_EYE] = pixels.Color(255, 0, 0);
     rgbLeds[MOUTH] = pixels.Color(255, 0, 0);
