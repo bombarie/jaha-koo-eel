@@ -100,7 +100,7 @@ void doThresholdChangeCalibrated();
 float throttleSmoothFactor = 0.12;
 int8_t channelChangeThreshold = 1; // number of consecutive readings of a new channel
 
-// calibration state for doThresholdChangeCalibrated() - the sender intermittently transmits
+// calibration state for doThresholdChangeCalibrated() - when the sender transmits
 // a lower-bound marker (top 3 bits == 0) followed by an upper-bound value (> 512), letting us
 // track the actual analog range instead of trusting SBUS_VAL_MIN/SBUS_VAL_MAX to be exact.
 int16_t calibLowerBound = 0;
@@ -114,10 +114,14 @@ Preferences noodCalibPrefs;
 static const char *NOOD_CALIB_PREFS_NAMESPACE = "noodcal";
 static const unsigned long CALIB_BOUNDS_SAVE_DEBOUNCE_MS = 5000;
 
+// calibration variables
 int16_t calibLowerBoundPrev = calibLowerBound;
 int16_t calibUpperBoundPrev = calibUpperBound;
 unsigned long calibBoundsChangedAt = 0;
 bool calibBoundsPendingSave = false;
+
+// extra headroom for the lower bound to avoid flickering when transmitter values are zero.
+byte lowValueAntiflickerInsurance = 5; 
 
 void loadCalibBounds()
 {
@@ -262,10 +266,10 @@ void updateBodyLightValues()
   updateNoodZeroBaselineCapture();
 
   // smoothed values, remapped so each channel's captured zero baseline reads as 0
-  noodAvgVals[0] = noodsAvgSmoothFactor * noodAvgVals[0] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[0], noodZeroBaseline[0]);
-  noodAvgVals[1] = noodsAvgSmoothFactor * noodAvgVals[1] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[1], noodZeroBaseline[1]);
-  noodAvgVals[2] = noodsAvgSmoothFactor * noodAvgVals[2] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[2], noodZeroBaseline[2]);
-  noodAvgVals[3] = noodsAvgSmoothFactor * noodAvgVals[3] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[3], noodZeroBaseline[3]);
+  noodAvgVals[0] = noodsAvgSmoothFactor * noodAvgVals[0] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[0], noodZeroBaseline[0] + lowValueAntiflickerInsurance);
+  noodAvgVals[1] = noodsAvgSmoothFactor * noodAvgVals[1] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[1], noodZeroBaseline[1] + lowValueAntiflickerInsurance);
+  noodAvgVals[2] = noodsAvgSmoothFactor * noodAvgVals[2] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[2], noodZeroBaseline[2] + lowValueAntiflickerInsurance);
+  noodAvgVals[3] = noodsAvgSmoothFactor * noodAvgVals[3] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[3], noodZeroBaseline[3] + lowValueAntiflickerInsurance);
 }
 
 void doDirectChange()
