@@ -16,6 +16,16 @@ void updateHeadLightValues();
 
 uint32_t rgbLeds[3] = {0, 0, 0};
 
+enum EYE_COLORS
+{
+    OFF = 0,
+    RED = 1,
+    GREEN = 2,
+    BLUE = 3,
+    ORANGE = 4,
+    WHITE = 5
+};
+
 #define LEFT_EYE 0
 #define RIGHT_EYE 2
 #define MOUTH 1
