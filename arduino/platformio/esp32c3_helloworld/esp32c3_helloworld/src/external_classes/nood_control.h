@@ -42,6 +42,8 @@ extern int16_t calibLowerBound;
 extern int16_t calibUpperBound;
 void loadCalibBounds();
 void checkAndPersistCalibBounds();
+void loadNoodZeroBaseline();
+void saveNoodZeroBaseline();
 
 void initNoods()
 {
@@ -74,6 +76,7 @@ void initNoods()
   prevCalibState = calibState;
 
   loadCalibBounds();
+  loadNoodZeroBaseline();
 }
 
 // static const uint8_t noodIncomingValueOffsets[] = {9, 10, 9, 9}; // original values
@@ -121,7 +124,7 @@ unsigned long calibBoundsChangedAt = 0;
 bool calibBoundsPendingSave = false;
 
 // extra headroom for the lower bound to avoid flickering when transmitter values are zero.
-byte lowValueAntiflickerInsurance = 5; 
+byte AntiflickerDeadband = 10; 
 
 void loadCalibBounds()
 {
@@ -188,6 +191,32 @@ unsigned long noodZeroBaselineCaptureStartMs = 0;
 float noodZeroBaselineSum[] = {0, 0, 0, 0};
 uint32_t noodZeroBaselineSampleCount = 0;
 
+// persistence for noodZeroBaseline[], reusing the same NVS namespace/Preferences
+// instance as calibLowerBound/calibUpperBound.
+void loadNoodZeroBaseline()
+{
+  Serial.println("Loading nood zero baseline from NVS...");
+
+  noodCalibPrefs.begin(NOOD_CALIB_PREFS_NAMESPACE, true); // read-only
+  noodZeroBaseline[0] = noodCalibPrefs.getShort("nzb0", noodZeroBaseline[0]);
+  noodZeroBaseline[1] = noodCalibPrefs.getShort("nzb1", noodZeroBaseline[1]);
+  noodZeroBaseline[2] = noodCalibPrefs.getShort("nzb2", noodZeroBaseline[2]);
+  noodZeroBaseline[3] = noodCalibPrefs.getShort("nzb3", noodZeroBaseline[3]);
+  noodCalibPrefs.end();
+}
+
+void saveNoodZeroBaseline()
+{
+  Serial.println("Saving nood zero baseline to NVS...");
+
+  noodCalibPrefs.begin(NOOD_CALIB_PREFS_NAMESPACE, false); // read-write
+  noodCalibPrefs.putShort("nzb0", noodZeroBaseline[0]);
+  noodCalibPrefs.putShort("nzb1", noodZeroBaseline[1]);
+  noodCalibPrefs.putShort("nzb2", noodZeroBaseline[2]);
+  noodCalibPrefs.putShort("nzb3", noodZeroBaseline[3]);
+  noodCalibPrefs.end();
+}
+
 void startNoodZeroBaselineCapture()
 {
   Serial.println("Capturing nood zero baseline for " + String(noodZeroBaselineCaptureDurationSec) + "s...");
@@ -218,6 +247,7 @@ void updateNoodZeroBaselineCapture()
       noodZeroBaseline[i] = noodZeroBaselineSampleCount > 0 ? (int16_t)(noodZeroBaselineSum[i] / noodZeroBaselineSampleCount) : 0;
     }
     noodZeroBaselineCapturing = false;
+    saveNoodZeroBaseline();
 
     Serial.println("Nood zero baseline captured: " + String(noodZeroBaseline[0]) + ", " + String(noodZeroBaseline[1]) + ", " + String(noodZeroBaseline[2]) + ", " + String(noodZeroBaseline[3]));
   }
@@ -266,10 +296,10 @@ void updateBodyLightValues()
   updateNoodZeroBaselineCapture();
 
   // smoothed values, remapped so each channel's captured zero baseline reads as 0
-  noodAvgVals[0] = noodsAvgSmoothFactor * noodAvgVals[0] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[0], noodZeroBaseline[0] + lowValueAntiflickerInsurance);
-  noodAvgVals[1] = noodsAvgSmoothFactor * noodAvgVals[1] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[1], noodZeroBaseline[1] + lowValueAntiflickerInsurance);
-  noodAvgVals[2] = noodsAvgSmoothFactor * noodAvgVals[2] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[2], noodZeroBaseline[2] + lowValueAntiflickerInsurance);
-  noodAvgVals[3] = noodsAvgSmoothFactor * noodAvgVals[3] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[3], noodZeroBaseline[3] + lowValueAntiflickerInsurance);
+  noodAvgVals[0] = noodsAvgSmoothFactor * noodAvgVals[0] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[0], noodZeroBaseline[0] + AntiflickerDeadband);
+  noodAvgVals[1] = noodsAvgSmoothFactor * noodAvgVals[1] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[1], noodZeroBaseline[1] + AntiflickerDeadband);
+  noodAvgVals[2] = noodsAvgSmoothFactor * noodAvgVals[2] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[2], noodZeroBaseline[2] + AntiflickerDeadband);
+  noodAvgVals[3] = noodsAvgSmoothFactor * noodAvgVals[3] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[3], noodZeroBaseline[3] + AntiflickerDeadband);
 }
 
 void doDirectChange()
