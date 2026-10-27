@@ -11,17 +11,37 @@
 EelMotor motor1(motor1a_pin, motor1b_pin, motor1_chan, resolution, freq);
 EelMotor motor2(motor2a_pin, motor2b_pin, motor2_chan, resolution, freq);
 
+float APPLY_MOTOR_RAMPING = true; // 2026-10-27 why not bool?
+int16_t _motor1Val;
+int16_t _motor2Val;
 int16_t motor1Val;
 int16_t motor2Val;
+float _motor1ValFiltered = 0;
+float _motor2ValFiltered = 0;
 
-void initMotors();
+float motorIntensity = .9;
+float motorRamping = .23; // 0.0-1.0, 1.0 = no ramping, 0.0 = max ramping
+
+// void initMotors();
+void initMotors(bool applyMotorRamping, float motorIntensityFactor, bool motor1Reversed, bool motor2Reversed);
+void initMotors(bool applyMotorRamping, float motorIntensityFactor, float motorRampingFactor, bool motor1Reversed, bool motor2Reversed);
 void calcMotorValues();
 void driveMotors();
 
-void initMotors()
+void initMotors(bool applyMotorRamping, float motorIntensityFactor, bool motor1Reversed, bool motor2Reversed)
 {
-  motor1.reversed = true;
-  motor2.reversed = true;
+  APPLY_MOTOR_RAMPING = applyMotorRamping;
+  motorIntensity = motorIntensityFactor;
+  motor1.reversed = motor1Reversed;
+  motor2.reversed = motor2Reversed;
+}
+void initMotors(bool applyMotorRamping, float motorIntensityFactor, float motorRampingFactor, bool motor1Reversed, bool motor2Reversed)
+{
+  APPLY_MOTOR_RAMPING = applyMotorRamping;
+  motorRamping = motorRampingFactor;
+  motorIntensity = motorIntensityFactor;
+  motor1.reversed = motor1Reversed;
+  motor2.reversed = motor2Reversed;
 }
 
 uint8_t motorStrength;
@@ -107,19 +127,19 @@ void calcMotorValues()
     uint16_t mixLeft = constrain(map(data.ch[TX_ROLL], SBUS_VAL_CENTER, SBUS_VAL_MIN, 1000, 0), 0, 1000);
     uint16_t mixRight = constrain(map(data.ch[TX_ROLL], SBUS_VAL_CENTER, SBUS_VAL_MAX, 1000, 0), 0, 1000);
 
-    // motor1Val = (int16_t)((throttleVal * (2000 - mix)) / mulVal);
+    // _motor1Val = (int16_t)((throttleVal * (2000 - mix)) / mulVal);
     // motor2Val = (int16_t)((throttleVal * mix) / mulVal);
-    motor1Val = (int16_t)((throttleVal * mixRight) / 1000);
-    motor2Val = (int16_t)((throttleVal * mixLeft) / 1000);
+    _motor1Val = (int16_t)((throttleVal * mixRight) / 1000);
+    _motor2Val = (int16_t)((throttleVal * mixLeft) / 1000);
 
     // taper off motor strength as pitch stick gets closer to center
     if (pitchOffset < 75)
     {
-      motor1Val *= map(pitchOffset, 0, 75, 350, 1000);
-      motor1Val /= 1000;
+      _motor1Val *= map(pitchOffset, 0, 75, 350, 1000);
+      _motor1Val /= 1000;
 
-      motor2Val *= map(pitchOffset, 0, 75, 350, 1000);
-      motor2Val /= 1000;
+      _motor2Val *= map(pitchOffset, 0, 75, 350, 1000);
+      _motor2Val /= 1000;
     }
   }
 
@@ -132,17 +152,17 @@ void calcMotorValues()
     int16_t mixLeft = constrain(map(data.ch[TX_ROLL], SBUS_VAL_CENTER, SBUS_VAL_MIN, 1000, -1000), -1000, 1000);
     int16_t mixRight = constrain(map(data.ch[TX_ROLL], SBUS_VAL_CENTER, SBUS_VAL_MAX, 1000, -1000), -1000, 1000);
 
-    motor1Val = (int16_t)((throttleVal * mixRight) / 1000);
-    motor2Val = (int16_t)((throttleVal * mixLeft) / 1000);
+    _motor1Val = (int16_t)((throttleVal * mixRight) / 1000);
+    _motor2Val = (int16_t)((throttleVal * mixLeft) / 1000);
 
     // taper off motor strength as pitch stick gets closer to center
     if (pitchOffset < 75)
     {
-      motor1Val *= map(pitchOffset, 0, 75, 350, 1000);
-      motor1Val /= 1000;
+      _motor1Val *= map(pitchOffset, 0, 75, 350, 1000);
+      _motor1Val /= 1000;
 
-      motor2Val *= map(pitchOffset, 0, 75, 350, 1000);
-      motor2Val /= 1000;
+      _motor2Val *= map(pitchOffset, 0, 75, 350, 1000);
+      _motor2Val /= 1000;
     }
   }
 
@@ -163,13 +183,27 @@ void calcMotorValues()
   if (doSineMovement)
   {
     float ampMul = constrain(map(data.ch[TX_AUX4], SBUS_VAL_MIN, SBUS_VAL_MAX, 0, 1000), 0, 1000) / 1000.0;
-    motor1Val *= (sinMult1 * ampMul) + (1.0 - ampMul);
-    motor2Val *= (sinMult2 * ampMul) + (1.0 - ampMul);
+    _motor1Val *= (sinMult1 * ampMul) + (1.0 - ampMul);
+    _motor2Val *= (sinMult2 * ampMul) + (1.0 - ampMul);
   }
   //*/
 
-  motor1Val = constrain(motor1Val, -255, 255);
-  motor2Val = constrain(motor2Val, -255, 255);
+  if (APPLY_MOTOR_RAMPING)
+  {
+    _motor1ValFiltered = motorRamping * _motor1Val + (1.0 - motorRamping) * _motor1ValFiltered;
+    _motor2ValFiltered = motorRamping * _motor2Val + (1.0 - motorRamping) * _motor2ValFiltered;
+
+    motor1Val = constrain((int16_t)_motor1ValFiltered, -255, 255);
+    motor2Val = constrain((int16_t)_motor2ValFiltered, -255, 255);
+  }
+  else
+  {
+    motor1Val = constrain(_motor1Val, -255, 255);
+    motor2Val = constrain(_motor2Val, -255, 255);
+  }
+
+  motor1Val = (int16_t)(motor1Val * motorIntensity);
+  motor2Val = (int16_t)(motor2Val * motorIntensity);
 
   // EVERY_N_MILLIS(150)
   // {
