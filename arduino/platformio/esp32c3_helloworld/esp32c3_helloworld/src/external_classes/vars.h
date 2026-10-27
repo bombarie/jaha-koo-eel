@@ -1,5 +1,5 @@
 // setting PWM properties
-const uint32_t freq = 2500;
+const uint32_t freq = 25000;
 const uint8_t resolution = 8;
 
 bool printSbusData = false;
