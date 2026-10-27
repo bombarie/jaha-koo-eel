@@ -319,7 +319,7 @@ void updateProcessLoop()
 
     if (postCalibrationCooldown)
     {
-        Serial.println("postasxsSazxCalibrationCooldown running, resetting nood values to 0");
+        // Serial.println("postCalibrationCooldown running, resetting nood values to 0");
 
         // set the nood values to 0 during the cooldown period, so the receiver doesn't get confused by the calibration values
         bitmash_nood1a = 0;
@@ -356,7 +356,7 @@ void updateSelectedNoodSendIndex()
 {
     // calibration states get shown twice as long so the receiver reliably picks up the bound values
     unsigned long currentChangeChannelInterval = (bitmashSendChannel == NOOD_SEND_CALIB_LOWER || bitmashSendChannel == NOOD_SEND_CALIB_UPPER || bitmashSendChannel == NOOD_SEND_CALIB_LOWER2)
-                                                     ? bitmashChangeChannelInterval * 2
+                                                     ? bitmashChangeChannelInterval * 4
                                                      : bitmashChangeChannelInterval;
 
     if (millis() - prevBitmashChangeChannelMills > currentChangeChannelInterval)
