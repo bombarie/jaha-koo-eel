@@ -42,6 +42,8 @@ extern int16_t calibLowerBound;
 extern int16_t calibUpperBound;
 void loadCalibBounds();
 void checkAndPersistCalibBounds();
+void loadNoodZeroBaseline();
+void saveNoodZeroBaseline();
 
 void initNoods()
 {
@@ -74,6 +76,7 @@ void initNoods()
   prevCalibState = calibState;
 
   loadCalibBounds();
+  loadNoodZeroBaseline();
 }
 
 // static const uint8_t noodIncomingValueOffsets[] = {9, 10, 9, 9}; // original values
@@ -94,13 +97,13 @@ byte ELRSParseMethod = 3;
 
 void doDirectChange();
 void doThresholdChange();
-void doThresholdChangeCalibrated();
 void doNextItemChange();
+void doThresholdChangeCalibrated();
 
 float throttleSmoothFactor = 0.12;
 int8_t channelChangeThreshold = 1; // number of consecutive readings of a new channel
 
-// calibration state for doThresholdChangeCalibrated() - the sender intermittently transmits
+// calibration state for doThresholdChangeCalibrated() - when the sender transmits
 // a lower-bound marker (top 3 bits == 0) followed by an upper-bound value (> 512), letting us
 // track the actual analog range instead of trusting SBUS_VAL_MIN/SBUS_VAL_MAX to be exact.
 int16_t calibLowerBound = 0;
@@ -114,10 +117,14 @@ Preferences noodCalibPrefs;
 static const char *NOOD_CALIB_PREFS_NAMESPACE = "noodcal";
 static const unsigned long CALIB_BOUNDS_SAVE_DEBOUNCE_MS = 5000;
 
+// calibration variables
 int16_t calibLowerBoundPrev = calibLowerBound;
 int16_t calibUpperBoundPrev = calibUpperBound;
 unsigned long calibBoundsChangedAt = 0;
 bool calibBoundsPendingSave = false;
+
+// extra headroom for the lower bound to avoid flickering when transmitter values are zero.
+byte AntiflickerDeadband = 10; 
 
 void loadCalibBounds()
 {
@@ -173,6 +180,88 @@ bool bListenForIncomingCalibration = true;
 
 float noodsAvgSmoothFactor = 0.95;
 
+// after calibration completes, the transmitter is assumed to be at rest, so whatever
+// noodVals[] reports during this window is treated as each channel's true zero (per-channel
+// hardware offsets mean this isn't actually 0) rather than trusting map()'s 0 floor.
+float noodZeroBaselineCaptureDurationSec = 3.0;
+int16_t noodZeroBaseline[] = {0, 0, 0, 0};
+
+bool noodZeroBaselineCapturing = false;
+unsigned long noodZeroBaselineCaptureStartMs = 0;
+float noodZeroBaselineSum[] = {0, 0, 0, 0};
+uint32_t noodZeroBaselineSampleCount = 0;
+
+// persistence for noodZeroBaseline[], reusing the same NVS namespace/Preferences
+// instance as calibLowerBound/calibUpperBound.
+void loadNoodZeroBaseline()
+{
+  Serial.println("Loading nood zero baseline from NVS...");
+
+  noodCalibPrefs.begin(NOOD_CALIB_PREFS_NAMESPACE, true); // read-only
+  noodZeroBaseline[0] = noodCalibPrefs.getShort("nzb0", noodZeroBaseline[0]);
+  noodZeroBaseline[1] = noodCalibPrefs.getShort("nzb1", noodZeroBaseline[1]);
+  noodZeroBaseline[2] = noodCalibPrefs.getShort("nzb2", noodZeroBaseline[2]);
+  noodZeroBaseline[3] = noodCalibPrefs.getShort("nzb3", noodZeroBaseline[3]);
+  noodCalibPrefs.end();
+}
+
+void saveNoodZeroBaseline()
+{
+  Serial.println("Saving nood zero baseline to NVS...");
+
+  noodCalibPrefs.begin(NOOD_CALIB_PREFS_NAMESPACE, false); // read-write
+  noodCalibPrefs.putShort("nzb0", noodZeroBaseline[0]);
+  noodCalibPrefs.putShort("nzb1", noodZeroBaseline[1]);
+  noodCalibPrefs.putShort("nzb2", noodZeroBaseline[2]);
+  noodCalibPrefs.putShort("nzb3", noodZeroBaseline[3]);
+  noodCalibPrefs.end();
+}
+
+void startNoodZeroBaselineCapture()
+{
+  Serial.println("Capturing nood zero baseline for " + String(noodZeroBaselineCaptureDurationSec) + "s...");
+
+  noodZeroBaselineSum[0] = noodZeroBaselineSum[1] = noodZeroBaselineSum[2] = noodZeroBaselineSum[3] = 0;
+  noodZeroBaselineSampleCount = 0;
+  noodZeroBaselineCaptureStartMs = millis();
+  noodZeroBaselineCapturing = true;
+}
+
+void updateNoodZeroBaselineCapture()
+{
+  if (!noodZeroBaselineCapturing)
+  {
+    return;
+  }
+
+  noodZeroBaselineSum[0] += noodVals[0];
+  noodZeroBaselineSum[1] += noodVals[1];
+  noodZeroBaselineSum[2] += noodVals[2];
+  noodZeroBaselineSum[3] += noodVals[3];
+  noodZeroBaselineSampleCount++;
+
+  if (millis() - noodZeroBaselineCaptureStartMs >= (unsigned long)(noodZeroBaselineCaptureDurationSec * 1000))
+  {
+    for (uint8_t i = 0; i < 4; i++)
+    {
+      noodZeroBaseline[i] = noodZeroBaselineSampleCount > 0 ? (int16_t)(noodZeroBaselineSum[i] / noodZeroBaselineSampleCount) : 0;
+    }
+    noodZeroBaselineCapturing = false;
+    saveNoodZeroBaseline();
+
+    Serial.println("Nood zero baseline captured: " + String(noodZeroBaseline[0]) + ", " + String(noodZeroBaseline[1]) + ", " + String(noodZeroBaseline[2]) + ", " + String(noodZeroBaseline[3]));
+  }
+}
+
+// remaps a raw noodVals[] reading so its channel's captured baseline (the transmitter's
+// true zero) lands at 0, instead of trusting the raw value's own 0 floor; constrain()
+// guards against map()'s extrapolation once rawVal dips below that baseline.
+int16_t mapNoodValWithBaseline(int16_t rawVal, int16_t baseline)
+{
+  int16_t effectiveBaseline = constrain(baseline, 0, 254); // avoid div-by-zero in map() below
+  return constrain(map(rawVal, effectiveBaseline, 255, 0, 255), 0, 255);
+}
+
 void updateBodyLightValues()
 {
   // map throttle range to 0-1023
@@ -204,12 +293,13 @@ void updateBodyLightValues()
   }
 
   checkAndPersistCalibBounds();
+  updateNoodZeroBaselineCapture();
 
-  // smoothed values
-  noodAvgVals[0] = noodsAvgSmoothFactor * noodAvgVals[0] + (1.0 - noodsAvgSmoothFactor) * noodVals[0];
-  noodAvgVals[1] = noodsAvgSmoothFactor * noodAvgVals[1] + (1.0 - noodsAvgSmoothFactor) * noodVals[1];
-  noodAvgVals[2] = noodsAvgSmoothFactor * noodAvgVals[2] + (1.0 - noodsAvgSmoothFactor) * noodVals[2];
-  noodAvgVals[3] = noodsAvgSmoothFactor * noodAvgVals[3] + (1.0 - noodsAvgSmoothFactor) * noodVals[3];
+  // smoothed values, remapped so each channel's captured zero baseline reads as 0
+  noodAvgVals[0] = noodsAvgSmoothFactor * noodAvgVals[0] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[0], noodZeroBaseline[0] + AntiflickerDeadband);
+  noodAvgVals[1] = noodsAvgSmoothFactor * noodAvgVals[1] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[1], noodZeroBaseline[1] + AntiflickerDeadband);
+  noodAvgVals[2] = noodsAvgSmoothFactor * noodAvgVals[2] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[2], noodZeroBaseline[2] + AntiflickerDeadband);
+  noodAvgVals[3] = noodsAvgSmoothFactor * noodAvgVals[3] + (1.0 - noodsAvgSmoothFactor) * mapNoodValWithBaseline(noodVals[3], noodZeroBaseline[3] + AntiflickerDeadband);
 }
 
 void doDirectChange()
@@ -307,6 +397,7 @@ void doThresholdChangeCalibrated()
       if (throttleSmoothed > calibThreshold)
       {
         calibState = CALIB_IDLE; // bounds are assumed set -> fall through and resume regular parsing this frame
+        startNoodZeroBaselineCapture();
       }
       else
       {

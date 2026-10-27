@@ -1,5 +1,5 @@
 // setting PWM properties
-const uint32_t freq = 2500;
+const uint32_t freq = 25000;
 const uint8_t resolution = 8;
 
 bool printSbusData = false;
@@ -9,10 +9,10 @@ uint16_t throttle, throttleAdjusted, throttleSmoothed;
 
 enum HEAD_STATE
 {
-  STATE_1,
-  STATE_2,
-  STATE_3,
-  STATE_4
+  STATE_1,  // all off
+  STATE_2,  // all green
+  STATE_3,  // all white
+  STATE_4   // all green eyes, white mouth
 };
 HEAD_STATE headState = STATE_1;
 

@@ -89,20 +89,24 @@ void EelMotor::motorRev(long pwmSpeed)
     }
 }
 
+// Slow-decay drive: hold the non-driven pin HIGH instead of LOW, so the
+// DRV8833 brakes between PWM pulses instead of coasting through its body
+// diodes. Cuts the flyback ripple/noise that fast decay produces on every
+// PWM edge (confirmed on hardware).
 void EelMotor::_motorGo()
 {
-    ledcDetachPin(_pinIN2);
-    digitalWrite(_pinIN2, LOW);
+    ledcDetachPin(_pinIN1);
+    digitalWrite(_pinIN1, HIGH);
 
-    ledcAttachPin(_pinIN1, _ledChan);
+    ledcAttachPin(_pinIN2, _ledChan);
     ledcWrite(_ledChan, _pwmVal);
 }
 
 void EelMotor::_motorRev()
 {
-    ledcDetachPin(_pinIN1);
-    digitalWrite(_pinIN1, LOW);
+    ledcDetachPin(_pinIN2);
+    digitalWrite(_pinIN2, HIGH);
 
-    ledcAttachPin(_pinIN2, _ledChan);
+    ledcAttachPin(_pinIN1, _ledChan);
     ledcWrite(_ledChan, _pwmVal);
 }

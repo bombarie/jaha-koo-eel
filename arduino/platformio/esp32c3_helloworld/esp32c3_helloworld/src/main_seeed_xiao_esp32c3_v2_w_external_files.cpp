@@ -22,6 +22,19 @@ x -> print nothing (no noods and no sbus data)
 
 */
 
+/****************************************************************************************************************
+ 
+▗▖ ▗▖▗▖ ▗▖▗▄▄▄▖ ▗▄▄▖▗▖ ▗▖    ▗▄▄▄▖▗▄▄▄▖▗▖   
+▐▌ ▐▌▐▌ ▐▌  █  ▐▌   ▐▌ ▐▌    ▐▌   ▐▌   ▐▌   
+▐▌ ▐▌▐▛▀▜▌  █  ▐▌   ▐▛▀▜▌    ▐▛▀▀▘▐▛▀▀▘▐▌   
+▐▙█▟▌▐▌ ▐▌▗▄█▄▖▝▚▄▄▖▐▌ ▐▌    ▐▙▄▄▖▐▙▄▄▖▐▙▄▄▖
+
+Select which Eel body you are using by changing the EEL_BODY define below.
+FYI: Eel #3 is the one developed by Daan & Nathan
+
+****************************************************************************************************************/
+#define EEL_BODY 1
+
 float sinCounter = 0.0;
 float sinCounterIncrement = 0.05;
 
@@ -31,7 +44,7 @@ byte hVal = 0;
 byte vVal = 0;
 
 // define methods
-void updateHeadBodyLights_disconnected();
+void blinkHeadLights(uint16_t blinkDelay, EYE_COLORS color);
 void updateHeadBodyState();
 
 void setup()
@@ -40,7 +53,16 @@ void setup()
 
   initELRSRX();
   initNoods();
-  initMotors();
+
+  if (EEL_BODY == 1 || EEL_BODY == 2)
+  {
+    initMotors(false, 1.0, false, false);
+  }
+  if (EEL_BODY == 3)
+  {
+    initMotors(true, 0.85, 0.22, false, false);
+  }
+
   initPixels();
 
   Serial.println("Hello World!");
@@ -65,7 +87,7 @@ void loop()
     {
     case DISCONNECTED:
       resetSbusData();
-      updateHeadBodyLights_disconnected();
+      blinkHeadLights(500, EYE_COLORS::RED);
       break;
     case CONNECTION_ESTABLISHED:
       // maybe do some temporary transition lighting here from disconnected to connected, but for now just go to connected
@@ -77,7 +99,16 @@ void loop()
       break;
     case CONNECTED:
       updateBodyLightValues();
-      updateHeadLightValues();
+
+      // display blinking red lights if calibrating
+      if (calibState != CalibState::CALIB_IDLE || noodZeroBaselineCapturing)
+      {
+        blinkHeadLights(150, EYE_COLORS::ORANGE);
+      }
+      else
+      {
+        updateHeadLightValues();
+      }
       break;
     }
 
@@ -111,7 +142,7 @@ void updateHeadBodyState()
   }
 }
 
-void updateHeadBodyLights_disconnected()
+void blinkHeadLights(uint16_t blinkDelay, EYE_COLORS color)
 {
   // set noods off
   noodAvgVals[0] = 0;
@@ -120,11 +151,36 @@ void updateHeadBodyLights_disconnected()
   noodAvgVals[3] = 0;
 
   // blink rgb leds red
-  if ((millis() / 500) % 2 == 0)
+  if ((millis() / blinkDelay) % 2 == 0)
   {
-    rgbLeds[RIGHT_EYE] = pixels.Color(255, 0, 0);
-    rgbLeds[MOUTH] = pixels.Color(255, 0, 0);
-    rgbLeds[LEFT_EYE] = pixels.Color(255, 0, 0);
+    switch (color)
+    {
+    case EYE_COLORS::RED:
+      rgbLeds[RIGHT_EYE] = pixels.Color(255, 0, 0);
+      rgbLeds[MOUTH] = pixels.Color(255, 0, 0);
+      rgbLeds[LEFT_EYE] = pixels.Color(255, 0, 0);
+      break;
+    case EYE_COLORS::GREEN:
+      rgbLeds[RIGHT_EYE] = pixels.Color(0, 255, 0);
+      rgbLeds[MOUTH] = pixels.Color(0, 255, 0);
+      rgbLeds[LEFT_EYE] = pixels.Color(0, 255, 0);
+      break;
+    case EYE_COLORS::BLUE:
+      rgbLeds[RIGHT_EYE] = pixels.Color(0, 0, 255);
+      rgbLeds[MOUTH] = pixels.Color(0, 0, 255);
+      rgbLeds[LEFT_EYE] = pixels.Color(0, 0, 255);
+      break;
+    case EYE_COLORS::ORANGE:
+      rgbLeds[RIGHT_EYE] = pixels.Color(255, 165, 0);
+      rgbLeds[MOUTH] = pixels.Color(255, 165, 0);
+      rgbLeds[LEFT_EYE] = pixels.Color(255, 165, 0);
+      break;
+    case EYE_COLORS::WHITE:
+      rgbLeds[RIGHT_EYE] = pixels.Color(255, 255, 255);
+      rgbLeds[MOUTH] = pixels.Color(255, 255, 255);
+      rgbLeds[LEFT_EYE] = pixels.Color(255, 255, 255);
+      break;
+    }
   }
   else
   {
